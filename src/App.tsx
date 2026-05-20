@@ -12,10 +12,11 @@ import Coverage from './pages/Coverage'
 import PagePerformance from './pages/PagePerformance'
 import KeywordGap from './pages/KeywordGap'
 import SerpFeatures from './pages/SerpFeatures'
+import SEOActivity from './pages/SEOActivity'
 import {
   BarChart2, Users, Link, LogOut, Search, LineChart,
   Zap, Gauge, FileSearch, Layers, GitCompare, Sparkles, TrendingUp,
-  Globe
+  Globe, Activity
 } from 'lucide-react'
 
 const NAV = [
@@ -24,6 +25,7 @@ const NAV = [
   { id: 'divider1', label: '', icon: null },
   { id: 'rankings', label: 'Keyword Rankings', icon: BarChart2 },
   { id: 'opportunities', label: 'Opportunities', icon: Zap },
+  { id: 'seo-activity', label: 'SEO Activity', icon: Activity },
   { id: 'divider2', label: '', icon: null },
   { id: 'cwv', label: 'Core Web Vitals', icon: Gauge },
   { id: 'coverage', label: 'Index Coverage', icon: FileSearch },
@@ -287,6 +289,7 @@ export default function App() {
           <>
             {tab === 'rankings' && <Rankings siteUrl={siteUrl} providerToken={providerToken} />}
             {tab === 'opportunities' && <Opportunities siteUrl={siteUrl} providerToken={providerToken} />}
+            {tab === 'seo-activity' && <SEOActivity siteUrl={siteUrl} />}
             {tab === 'cwv' && <CoreWebVitals siteUrl={siteUrl} providerToken={providerToken} />}
             {tab === 'coverage' && <Coverage siteUrl={siteUrl} providerToken={providerToken} />}
             {tab === 'page-perf' && <PagePerformance siteUrl={siteUrl} providerToken={providerToken} ga4PropertyId={ga4PropertyId} />}

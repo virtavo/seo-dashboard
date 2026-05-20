@@ -230,11 +230,28 @@ export default function App() {
       {/* Main */}
       <main style={{ flex: 1, overflow: 'auto', padding: 24 }}>
         {/* Header */}
-        <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1e293b', letterSpacing: '-0.3px' }}>{currentNav?.label}</h1>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {/* Site selector — shown on all GSC-based tabs */}
+            {!['overview', 'analytics', 'serp', 'trends'].includes(tab) && sites.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Globe size={14} color="#6366f1" />
+                <select
+                  value={siteUrl}
+                  onChange={e => setSiteUrl(e.target.value)}
+                  style={{ height: 32, border: '1px solid #c7d2fe', borderRadius: 8, padding: '0 10px', fontSize: 12, fontWeight: 600, color: '#4338ca', background: '#eef2ff', cursor: 'pointer', outline: 'none', maxWidth: 260 }}
+                >
+                  {sites.map((s: any) => (
+                    <option key={s.siteUrl} value={s.siteUrl}>
+                      {s.siteUrl.replace(/https?:\/\//, '').replace(/\/$/, '')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div style={{ background: '#dcfce7', color: '#16a34a', fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 4 }}>
               <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />
               Live Data

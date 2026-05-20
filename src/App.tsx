@@ -289,7 +289,7 @@ export default function App() {
           <>
             {tab === 'rankings' && <Rankings siteUrl={siteUrl} providerToken={providerToken} />}
             {tab === 'opportunities' && <Opportunities siteUrl={siteUrl} providerToken={providerToken} />}
-            {tab === 'seo-activity' && <SEOActivity siteUrl={siteUrl} />}
+            {tab === 'seo-activity' && <SEOActivity />}
             {tab === 'cwv' && <CoreWebVitals siteUrl={siteUrl} providerToken={providerToken} />}
             {tab === 'coverage' && <Coverage siteUrl={siteUrl} providerToken={providerToken} />}
             {tab === 'page-perf' && <PagePerformance siteUrl={siteUrl} providerToken={providerToken} ga4PropertyId={ga4PropertyId} />}

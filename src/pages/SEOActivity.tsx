@@ -9,10 +9,31 @@ import { TrendingUp, TrendingDown, Minus, FileText, Lightbulb, AlignLeft, Search
 const card = { background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }
 const COLORS = ['#6366f1','#22c55e','#f59e0b','#06b6d4','#ec4899','#8b5cf6','#ef4444','#14b8a6']
 
-// SEO Activity is always for mysnapvitals.com data
-const KW_SITE = 'https://www.mysnapvitals.com/'
+// Derive site_domain values from the GSC siteUrl prop
+function deriveKwSite(siteUrl: string): string {
+  if (!siteUrl) return 'https://www.mysnapvitals.com/'
+  const scMatch = siteUrl.match(/^sc-domain:(.+)$/)
+  if (scMatch) return `https://www.${scMatch[1]}/`
+  return siteUrl.endsWith('/') ? siteUrl : siteUrl + '/'
+}
 
-export default function SEOActivity() {
+function deriveOptSite(siteUrl: string): string {
+  if (!siteUrl) return 'mysnapvitals.com'
+  const scMatch = siteUrl.match(/^sc-domain:(.+)$/)
+  if (scMatch) return scMatch[1]
+  try { return new URL(siteUrl).hostname.replace(/^www\./, '') } catch { return siteUrl }
+}
+
+function badgeLabel(siteUrl: string): string {
+  if (!siteUrl) return 'mysnapvitals.com'
+  const scMatch = siteUrl.match(/^sc-domain:(.+)$/)
+  if (scMatch) return scMatch[1]
+  try { return new URL(siteUrl).hostname } catch { return siteUrl }
+}
+
+interface SEOActivityProps { siteUrl?: string }
+
+export default function SEOActivity({ siteUrl = '' }: SEOActivityProps) {
   const [activeTab, setActiveTab] = useState<'trends' | 'log'>('trends')
   const [keywords, setKeywords] = useState<any[]>([])
   const [history, setHistory] = useState<any[]>([])
@@ -22,7 +43,10 @@ export default function SEOActivity() {
   const [search, setSearch] = useState('')
   const [expandedRow, setExpandedRow] = useState<string | null>(null)
 
-  useEffect(() => { loadData() }, [])
+  const kwSite  = deriveKwSite(siteUrl)
+  const optSite = deriveOptSite(siteUrl)
+
+  useEffect(() => { loadData() }, [siteUrl])
 
   const loadData = async () => {
     setLoading(true)
@@ -31,21 +55,21 @@ export default function SEOActivity() {
         supabase
           .from('keyword_tracking')
           .select('keyword, current_position, previous_position, clicks, impressions, ctr, last_checked, is_active, position_change')
-          .eq('site_domain', KW_SITE)
+          .eq('site_domain', kwSite)
           .eq('is_active', true)
           .order('current_position', { ascending: true, nullsFirst: false }),
 
         supabase
           .from('keyword_tracking_history')
           .select('keyword, position, impressions, clicks, recorded_at, date_range_start')
-          .eq('site_domain', KW_SITE)
+          .eq('site_domain', kwSite)
           .not('position', 'is', null)
           .order('recorded_at', { ascending: true }),
 
         supabase
           .from('blog_seo_optimizations')
           .select('id, slug, title, original_excerpt, optimized_excerpt, target_keywords, meta_description, ai_suggestions, status, created_at')
-          .ilike('site_domain', '%mysnapvitals%')
+          .ilike('site_domain', `%${optSite}%`)
           .order('created_at', { ascending: false })
       ])
 
@@ -94,7 +118,7 @@ export default function SEOActivity() {
       {/* Site badge */}
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 20, padding: '4px 12px', alignSelf: 'flex-start' }}>
         <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#16a34a' }}>mysnapvitals.com</span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#16a34a' }}>{badgeLabel(siteUrl)}</span>
       </div>
 
       {/* Tab switch */}

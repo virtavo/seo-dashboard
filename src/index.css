@@ -1,0 +1,257 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+==========================================================================
+【AI HANDOVER NOTE】
+1. DESIGN PHILOSOPHY:
+   - Data-First Analytics Dashboard: 设计围绕数据可视化与信息密度展开，优先考虑数据的清晰呈现与快速扫描能力
+   - Neo-Professional Minimalism: 融合 Google Cloud 的简洁专业风格与现代 SaaS 仪表盘的深色美学，创造专注于数据分析的沉浸式体验
+   - Midnight Analytics Aesthetic: 深夜蓝背景 (#0f1117) 营造专业分析师工作环境，减少视觉疲劳，突出数据与图表
+   - 为什么选择这种风格：SEO 分析工作通常需要长时间盯着数据，深色主题减少眼睛疲劳；紫色主色 (#6366f1) 传达技术感与洞察力，同时在深色背景上具有优秀的视觉层次
+
+2. TYPOGRAPHY:
+   - Sans 字体 (Inter + Noto Sans SC): Inter 是现代 SaaS 产品的黄金标准，具有优秀的数字可读性和屏幕渲染效果，特别适合数据密集型界面；Noto Sans SC 确保中文界面的专业性与一致性
+   - Mono 字体 (JetBrains Mono): 专为开发者设计的等宽字体，用于展示 URL、关键词、代码片段、API 响应等技术数据，其清晰的字符区分度（如 0/O, 1/l/I）对 SEO 数据展示至关重要
+   - 字体层级：使用 Inter 的多重字重 (400/500/600/700) 建立清晰的信息层级，确保在数据卡片、表格、图表标签中都有适当的视觉权重
+
+3. COLOR SYSTEM:
+   - 品牌主色 (Indigo #6366f1): 选择 H=245° 的靛蓝色相，介于蓝色（信任/专业）与紫色（创新/洞察）之间，完美契合 SEO 分析平台的定位——既需要数据的可信度，又强调算法洞察的智能性
+   - --brand 映射逻辑: --brand → --primary (主要操作按钮、链接)、--accent (数据高亮、Quick Win 标记)、--ring (焦点状态)
+   - 语义色设计: success (绿色 H=150°) 用于排名上升、流量增长；warning (琥珀色 H=45°) 用于排名波动、需关注的指标；destructive (红色 H=10°) 用于排名下降、错误状态
+   - 深夜蓝背景系统: background 使用 L=0.08 的极深蓝，card 使用 L=0.12 提供微妙层次，popover 使用 L=0.15 确保浮层可见性
+   - 图表色板: 5 个 chart 颜色覆盖冷暖色调，确保多条数据线在深色背景上清晰可辨，饱和度适中避免视觉疲劳
+
+4. USAGE GUIDE:
+   - 布局类型: Dashboard full-width layout，参考 Google Cloud 的左侧边栏 + 顶部搜索栏 + 主内容区三栏结构
+   - 卡片系统: 使用 card 背景 (L=0.12) + 1px border (L=0.20) 创建清晰的数据容器，卡片内部使用 muted 背景 (L=0.10) 区分次要信息区域
+   - 数据可视化: 图表使用 chart_1~5 颜色，确保在深色背景上有足够对比度；表格使用 muted 背景的斑马纹提升可读性
+   - 交互反馈: ring 颜色 (紫色 L=0.55) 用于焦点状态，确保键盘导航的可访问性；hover 状态使用 accent 背景 (L=0.14) 提供微妙反馈
+   - 特效使用: 避免过度使用 glassmorphism，仅在 popover/dropdown 使用轻微 backdrop-blur(8px) 保持专业感；卡片使用细微 box-shadow 营造深度
+   - 侧边栏设计: sidebar 使用比 background 稍亮的 L=0.10，sidebar_primary 使用品牌紫色，确保导航清晰可见
+   - 项目特定规则: Quick Win 关键词使用 accent 颜色高亮；排名趋势使用 success/destructive 颜色编码；竞争对手数据使用 chart 色板区分
+==========================================================================
+*/
+
+:root {
+  /* Typography */
+  --font-sans: Inter, 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  
+  /* Radius */
+  --radius: 0.5rem;
+
+  /* Core UI Tokens */
+  --background: oklch(0.99 0.002 245);
+  --foreground: oklch(0.15 0.01 245);
+  --card: oklch(0.98 0.003 245);
+  --card-foreground: oklch(0.15 0.01 245);
+  --popover: oklch(0.99 0.002 245);
+  --popover-foreground: oklch(0.15 0.01 245);
+  --primary: oklch(0.55 0.22 265);
+  --primary-foreground: oklch(0.98 0.003 265);
+  --secondary: oklch(0.92 0.01 245);
+  --secondary-foreground: oklch(0.20 0.015 245);
+  --muted: oklch(0.94 0.008 245);
+  --muted-foreground: oklch(0.48 0.015 245);
+  --accent: oklch(0.93 0.015 265);
+  --accent-foreground: oklch(0.25 0.02 265);
+  --destructive: oklch(0.58 0.22 15);
+  --destructive-foreground: oklch(0.98 0.003 15);
+  --border: oklch(0.88 0.01 245);
+  --input: oklch(0.88 0.01 245);
+  --ring: oklch(0.55 0.22 265);
+  
+  /* Chart Tokens */
+  --chart-1: oklch(0.60 0.20 265);
+  --chart-2: oklch(0.65 0.18 195);
+  --chart-3: oklch(0.62 0.19 150);
+  --chart-4: oklch(0.68 0.17 45);
+  --chart-5: oklch(0.63 0.21 340);
+  
+  /* Sidebar Tokens */
+  --sidebar: oklch(0.97 0.003 245);
+  --sidebar-foreground: oklch(0.20 0.015 245);
+  --sidebar-primary: oklch(0.55 0.22 265);
+  --sidebar-primary-foreground: oklch(0.98 0.003 265);
+  --sidebar-accent: oklch(0.93 0.015 265);
+  --sidebar-accent-foreground: oklch(0.25 0.02 265);
+  --sidebar-border: oklch(0.88 0.01 245);
+  --sidebar-ring: oklch(0.55 0.22 265);
+}
+
+.dark {
+  --background: oklch(0.08 0.015 245);
+  --foreground: oklch(0.92 0.008 245);
+  --card: oklch(0.12 0.018 245);
+  --card-foreground: oklch(0.92 0.008 245);
+  --popover: oklch(0.15 0.020 245);
+  --popover-foreground: oklch(0.92 0.008 245);
+  --primary: oklch(0.60 0.24 265);
+  --primary-foreground: oklch(0.08 0.015 265);
+  --secondary: oklch(0.18 0.020 245);
+  --secondary-foreground: oklch(0.88 0.010 245);
+  --muted: oklch(0.10 0.016 245);
+  --muted-foreground: oklch(0.58 0.015 245);
+  --accent: oklch(0.14 0.022 265);
+  --accent-foreground: oklch(0.88 0.012 265);
+  --destructive: oklch(0.62 0.25 10);
+  --destructive-foreground: oklch(0.95 0.008 10);
+  --border: oklch(0.20 0.020 245);
+  --input: oklch(0.20 0.020 245);
+  --ring: oklch(0.55 0.24 265);
+  
+  /* Chart Tokens */
+  --chart-1: oklch(0.65 0.24 265);
+  --chart-2: oklch(0.68 0.22 195);
+  --chart-3: oklch(0.70 0.23 150);
+  --chart-4: oklch(0.72 0.21 45);
+  --chart-5: oklch(0.68 0.25 340);
+  
+  /* Sidebar Tokens */
+  --sidebar: oklch(0.10 0.016 245);
+  --sidebar-foreground: oklch(0.88 0.010 245);
+  --sidebar-primary: oklch(0.60 0.24 265);
+  --sidebar-primary-foreground: oklch(0.08 0.015 265);
+  --sidebar-accent: oklch(0.14 0.022 265);
+  --sidebar-accent-foreground: oklch(0.88 0.012 265);
+  --sidebar-border: oklch(0.20 0.020 245);
+  --sidebar-ring: oklch(0.55 0.24 265);
+}
+
+@theme inline {
+  /* Shadcn Core Mapping */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Charts Mapping */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Sidebar Mapping */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Typography */
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  /* Radius */
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply scroll-smooth antialiased;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans min-h-screen;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+
+  code, pre {
+    @apply font-mono;
+  }
+
+  ::selection {
+    @apply bg-primary/20 text-primary;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40;
+  }
+}
+
+/* ── SEO Dashboard Custom Styles ──────────────────────────── */
+.card {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  padding: 20px;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.badge-green  { background: rgba(34,197,94,0.15);  color: #22c55e; }
+.badge-red    { background: rgba(239,68,68,0.15);   color: #ef4444; }
+.badge-yellow { background: rgba(234,179,8,0.15);   color: #eab308; }
+.badge-blue   { background: rgba(99,102,241,0.15);  color: #818cf8; }
+.badge-gray   { background: rgba(148,163,184,0.15); color: #94a3b8; }
+.btn-primary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s;
+}
+.btn-primary:hover  { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary {
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid hsl(var(--border));
+  transition: background 0.2s;
+}
+.btn-secondary:hover { background: hsl(var(--muted)); }

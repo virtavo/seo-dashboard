@@ -188,9 +188,7 @@ export default function App() {
         {/* Logo */}
         <div style={{ padding: '18px 14px 14px', borderBottom: '1px solid #f1f5f9' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <div style={{ width: 32, height: 32, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(99,102,241,0.3)' }}>
-              <Search size={15} color="white" />
-            </div>
+            <img src="/logo-mark.png" alt="SEO Dashboard" style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'contain' }} />
             <div>
               <p style={{ fontWeight: 800, fontSize: 13, color: '#1e293b', lineHeight: 1.2 }}>SEO Dashboard</p>
               <p style={{ fontSize: 10, color: '#94a3b8', lineHeight: 1 }}>by ForeverDoodles</p>

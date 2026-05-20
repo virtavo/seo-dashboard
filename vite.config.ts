@@ -4,7 +4,6 @@ import react from '@vitejs/plugin-react-swc';
 import tailwindcss from '@tailwindcss/vite';
 import fs from 'node:fs/promises';
 import nodePath from 'node:path';
-import { componentTagger } from 'lovable-tagger';
 import path from "path";
 
 import { parse } from '@babel/parser';
@@ -215,8 +214,6 @@ export default defineConfig(({ mode }) => {
     plugins: [
       tailwindcss(),
       react(),
-      mode === 'development' &&
-      componentTagger(),
       cdnPrefixImages(),
     ].filter(Boolean),
     resolve: {

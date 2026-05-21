@@ -110,8 +110,10 @@ Deno.serve(async (req) => {
         })
       })
       let d = await r.json()
-      // Fallback to sessionMedium if channelGroup not available
+      let usedDim = 'sessionDefaultChannelGroup'
+      // Fallback 1: sessionMedium
       if (d.error) {
+        usedDim = 'sessionMedium'
         r = await fetch(`${gaBase}:runReport`, {
           method: 'POST', headers: authHeader,
           body: JSON.stringify({
@@ -123,7 +125,22 @@ Deno.serve(async (req) => {
         })
         d = await r.json()
       }
-      if (d.error) throw new Error(d.error.message)
+      // Fallback 2: sessionSource (most universally available)
+      if (d.error) {
+        usedDim = 'sessionSource'
+        r = await fetch(`${gaBase}:runReport`, {
+          method: 'POST', headers: authHeader,
+          body: JSON.stringify({
+            dateRanges: [{ startDate, endDate }],
+            dimensions: [{ name: 'sessionSource' }],
+            metrics: [{ name: 'sessions' }, { name: 'totalUsers' }],
+            orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+            limit: 20
+          })
+        })
+        d = await r.json()
+      }
+      if (d.error) throw new Error(`[${usedDim}] ${d.error.message || JSON.stringify(d.error)}`)
       result = (d.rows || []).map((row: any) => ({
         channel: row.dimensionValues[0].value,
         sessions: parseInt(row.metricValues[0].value),

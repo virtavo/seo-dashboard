@@ -51,7 +51,7 @@ export default function Rankings({ siteUrl, providerToken }: Props) {
       })
       .catch(() => setHistory([]))
       .finally(() => setHistLoading(false))
-  }, [selectedKw])
+  }, [selectedKw, siteUrl, providerToken, startDate, endDate])
 
   const filtered = keywords
     .filter(k => k.keys?.[0]?.toLowerCase().includes(search.toLowerCase()))

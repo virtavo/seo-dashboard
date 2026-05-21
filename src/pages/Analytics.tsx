@@ -80,12 +80,19 @@ export default function Analytics({ providerToken, ga4PropertyId, ga4Properties 
       else errs.countries = (results[4] as PromiseRejectedResult).reason?.message || 'API error'
       setErrors(errs)
       setLoading(false)
-      // Trigger AI analysis after data loads
-      if (results[0].status === 'fulfilled') fetchAI('sessions-trend', safeArr(results[0].value))
-      if (results[1].status === 'fulfilled') fetchAI('top-pages', safeArr(results[1].value))
-      if (results[2].status === 'fulfilled') fetchAI('traffic-sources', safeArr(results[2].value))
-      if (results[3].status === 'fulfilled') fetchAI('devices', safeArr(results[3].value))
-      if (results[4].status === 'fulfilled') fetchAI('countries', safeArr(results[4].value))
+      // Trigger AI analysis sequentially (800ms apart) to avoid rate limiting
+      ;(async () => {
+        const aiTasks: Array<[string, any]> = []
+        if (results[0].status === 'fulfilled') aiTasks.push(['sessions-trend', safeArr(results[0].value)])
+        if (results[1].status === 'fulfilled') aiTasks.push(['top-pages', safeArr(results[1].value)])
+        if (results[2].status === 'fulfilled') aiTasks.push(['traffic-sources', safeArr(results[2].value)])
+        if (results[3].status === 'fulfilled') aiTasks.push(['devices', safeArr(results[3].value)])
+        if (results[4].status === 'fulfilled') aiTasks.push(['countries', safeArr(results[4].value)])
+        for (const [type, data] of aiTasks) {
+          await fetchAI(type, data)
+          await new Promise(r => setTimeout(r, 800))
+        }
+      })()
     })
   }, [ga4PropertyId, providerToken, days])
 

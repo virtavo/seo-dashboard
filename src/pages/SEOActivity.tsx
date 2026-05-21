@@ -11,21 +11,21 @@ const COLORS = ['#6366f1','#22c55e','#f59e0b','#06b6d4','#ec4899','#8b5cf6','#ef
 
 // Derive site_domain values from the GSC siteUrl prop
 function deriveKwSite(siteUrl: string): string {
-  if (!siteUrl) return 'https://www.mysnapvitals.com/'
+  if (!siteUrl) return ''
   const scMatch = siteUrl.match(/^sc-domain:(.+)$/)
   if (scMatch) return `https://www.${scMatch[1]}/`
   return siteUrl.endsWith('/') ? siteUrl : siteUrl + '/'
 }
 
 function deriveOptSite(siteUrl: string): string {
-  if (!siteUrl) return 'mysnapvitals.com'
+  if (!siteUrl) return ''
   const scMatch = siteUrl.match(/^sc-domain:(.+)$/)
   if (scMatch) return scMatch[1]
   try { return new URL(siteUrl).hostname.replace(/^www\./, '') } catch { return siteUrl }
 }
 
 function badgeLabel(siteUrl: string): string {
-  if (!siteUrl) return 'mysnapvitals.com'
+  if (!siteUrl) return ''
   const scMatch = siteUrl.match(/^sc-domain:(.+)$/)
   if (scMatch) return scMatch[1]
   try { return new URL(siteUrl).hostname } catch { return siteUrl }

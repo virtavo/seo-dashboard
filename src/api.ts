@@ -215,7 +215,7 @@ export const emailLoginApi = {
     const hash = 'pbkdf2:' + b64
 
     const { data, error } = await supabase.functions.invoke('email-login', {
-      body: { action: 'login', email, password }
+      body: { action: 'login', email, password: hash }
     })
     if (error) throw new Error(error.message)
     if (data?.error) throw new Error(data.error)

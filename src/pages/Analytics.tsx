@@ -243,7 +243,18 @@ export default function Analytics({ providerToken, ga4PropertyId, ga4Properties 
                 )
               })}
             </div>
-          ) : <p style={{ color: '#94a3b8', fontSize: 13 }}>No data</p>}
+          ) : (
+            <div style={{ padding: '12px 0' }}>
+              {errors.sources ? (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px' }}>
+                  <p style={{ color: '#dc2626', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>⚠️ Failed to load Traffic Sources</p>
+                  <p style={{ color: '#b91c1c', fontSize: 11, fontFamily: 'monospace', wordBreak: 'break-all' }}>{errors.sources}</p>
+                </div>
+              ) : (
+                <p style={{ color: '#94a3b8', fontSize: 13 }}>No data for the selected period</p>
+              )}
+            </div>
+          )}
 
           {(aiInsights['traffic-sources'] || aiLoading['traffic-sources']) && (
             <div style={{ marginTop: 14, padding: '12px 16px', background: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', border: '1px solid #bae6fd', borderRadius: 10 }}>
@@ -286,7 +297,18 @@ export default function Analytics({ providerToken, ga4PropertyId, ga4Properties 
                 ))}
               </div>
             </>
-          ) : <p style={{ color: '#94a3b8', fontSize: 13 }}>No data</p>}
+          ) : (
+            <div style={{ padding: '12px 0' }}>
+              {errors.devices ? (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px' }}>
+                  <p style={{ color: '#dc2626', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>⚠️ Failed to load Devices</p>
+                  <p style={{ color: '#b91c1c', fontSize: 11, fontFamily: 'monospace', wordBreak: 'break-all' }}>{errors.devices}</p>
+                </div>
+              ) : (
+                <p style={{ color: '#94a3b8', fontSize: 13 }}>No data for the selected period</p>
+              )}
+            </div>
+          )}
 
           {(aiInsights['devices'] || aiLoading['devices']) && (
             <div style={{ marginTop: 14, padding: '12px 16px', background: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', border: '1px solid #bae6fd', borderRadius: 10 }}>

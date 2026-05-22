@@ -2,6 +2,7 @@ name = "seo-dashboard-api"
 main = "worker.js"
 compatibility_date = "2024-11-01"
 account_id = "de25ce3e1429d975c50ed828609a5243"
+workers_dev = true
 
 [vars]
 ADMIN_EMAIL = "homevirtavo@gmail.com"

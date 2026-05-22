@@ -108,14 +108,14 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
     setLoading(true)
 
     const results = await Promise.allSettled([
-      gscApi.keywords(providerToken, { siteUrl, startDate, endDate, rowLimit: 1000 }),         // [0] current kws
-      gscApi.keywords(providerToken, { siteUrl, startDate: prevStart, endDate: prevEnd, rowLimit: 1000 }), // [1] prev kws
+      gscApi.keywords(providerToken, { siteUrl, startDate, endDate, rowLimit: 1000, dimensions: ['query'] }),         // [0] current kws
+      gscApi.keywords(providerToken, { siteUrl, startDate: prevStart, endDate: prevEnd, rowLimit: 1000, dimensions: ['query'] }), // [1] prev kws
       gscApi.callAction('performance-trend', { siteUrl, startDate, endDate }, providerToken),  // [2] trend
-      gscApi.topPages(providerToken, { siteUrl, startDate, endDate, rowLimit: 50 }),           // [3] top pages
+      gscApi.topPages(providerToken, { siteUrl, startDate, endDate, rowLimit: 50, dimensions: ['page'] }),           // [3] top pages
       gscApi.callAction('by-country', { siteUrl, startDate, endDate, rowLimit: 15 }, providerToken), // [4] country
       gscApi.callAction('by-device', { siteUrl, startDate, endDate }, providerToken),          // [5] device
       gscApi.sitemaps(providerToken, { siteUrl }),                                             // [6] sitemaps
-      gscApi.opportunities(providerToken, { siteUrl, startDate, endDate }),                   // [7] opportunities
+      gscApi.opportunities(providerToken, { siteUrl, startDate, endDate, dimensions: ['query'], rowLimit: 100 }),                   // [7] opportunities
     ])
 
     const get = (i: number) => results[i].status === 'fulfilled' ? results[i].value : null

@@ -134,7 +134,16 @@ export const gscApi = {
     if (action === 'sites') return gscApi.sites(token)
     if (action === 'sitemaps') return gscApi.sitemaps(token, params)
     if (action === 'url-inspect') return gscApi.urlInspect(token, params.siteUrl, params.inspectionUrl)
-    return gscFetch(token, `${GSC}/sites/${encodeURIComponent(params.siteUrl)}/searchAnalytics/query`, params)
+    const dimMap: Record<string, string[]> = {
+      'performance-trend': ['date'],
+      'by-country': ['country'],
+      'by-device': ['device'],
+      'opportunities': ['query'],
+      'top-keywords-by-page': ['query'],
+    }
+    const body = { ...params }
+    if (dimMap[action] && !body.dimensions) body.dimensions = dimMap[action]
+    return gscFetch(token, `${GSC}/sites/${encodeURIComponent(params.siteUrl)}/searchAnalytics/query`, body)
   },
 }
 
@@ -314,6 +323,7 @@ export const cwvApi = {
 // ── Helpers ───────────────────────────────────────────────────────
 export function safeArr(r: any): any[] {
   if (Array.isArray(r)) return r
+  if (Array.isArray(r?.rows)) return r.rows  // GSC searchAnalytics returns { rows: [] }
   if (Array.isArray(r?.data)) return r.data
   return []
 }

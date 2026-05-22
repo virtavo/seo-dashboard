@@ -1,12 +1,10 @@
-import { supabase } from '@/integrations/supabase/client'
-
-const OAUTH_INIT_URL = 'https://grogrigybgimvuuunxef.supabase.co/functions/v1/oauth-callback?action=init&redirect_to='
-
 // ── Auth ─────────────────────────────────────────────────────────
+const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
+
 export const authApi = {
   signInWithGoogle: () => {
     const redirectTo = encodeURIComponent(window.location.origin + '/')
-    window.location.href = OAUTH_INIT_URL + redirectTo
+    window.location.href = `${API_BASE}/api/oauth/init?redirect_to=${redirectTo}`
   },
   signOut: () => {
     sessionStorage.clear()
@@ -17,16 +15,17 @@ export const authApi = {
 // ── Token refresh ─────────────────────────────────────────────────
 async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = sessionStorage.getItem('seo_refresh_token')
-  const sessionId = sessionStorage.getItem('seo_session_id')
   if (!refreshToken) return null
 
   try {
-    const { data, error } = await supabase.functions.invoke('token-refresh', {
-      body: { session_id: sessionId, refresh_token: refreshToken }
+    const r = await fetch(`${API_BASE}/api/oauth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
     })
-    if (error || !data?.access_token) return null
+    const data = await r.json()
+    if (!r.ok || !data?.access_token) return null
     sessionStorage.setItem('seo_token', data.access_token)
-    // Set new expiry (subtract 5 min buffer)
     const expiresAt = Date.now() + ((data.expires_in || 3600) - 300) * 1000
     sessionStorage.setItem('seo_token_expires', String(expiresAt))
     return data.access_token
@@ -60,12 +59,10 @@ export async function loadSession() {
 
   if (sessionId) {
     window.history.replaceState({}, '', window.location.pathname)
-    const { data, error } = await supabase
-      .from('oauth_sessions')
-      .select('*')
-      .eq('id', sessionId)
-      .single()
-    if (error || !data) return null
+    const r = await fetch(`${API_BASE}/api/session/${sessionId}`)
+    if (!r.ok) return null
+    const data = await r.json()
+    if (!data || data.error) return null
     sessionStorage.setItem('seo_session_id', sessionId)
     sessionStorage.setItem('seo_refresh_token', data.refresh_token || '')
     sessionStorage.setItem('seo_user', JSON.stringify({
@@ -92,50 +89,6 @@ export async function loadSession() {
     return { access_token: token, user: JSON.parse(user) }
   }
   return null
-}
-
-// ── Edge Function helper ──────────────────────────────────────────
-async function callEdge(fnName: string, body: any, providerToken?: string) {
-  const headers: Record<string, string> = {}
-  if (providerToken) headers['x-provider-token'] = providerToken
-  const { data, error } = await supabase.functions.invoke(fnName, { body, headers })
-  if (error) {
-    // Supabase SDK masks real edge-function errors with a generic message.
-    // Try to extract the actual error body from the response context.
-    try {
-      const ctx = (error as any).context
-      if (ctx) {
-        const errBody = typeof ctx.json === 'function' ? await ctx.json() : null
-        if (errBody?.error) throw new Error(errBody.error)
-      }
-    } catch (inner: any) {
-      // Only re-throw if we got a real message (not the same generic one)
-      if (inner.message && inner.message !== error.message) throw inner
-    }
-    throw new Error(error.message)
-  }
-  return data
-}
-
-// Auto-refreshing version for authenticated calls
-async function callEdgeAuth(fnName: string, body: any) {
-  let token = await getValidToken()
-  const headers: Record<string, string> = { 'x-provider-token': token }
-  const { data, error } = await supabase.functions.invoke(fnName, { body, headers })
-  if (error) {
-    // If 401, try one refresh
-    if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
-      const newToken = await refreshAccessToken()
-      if (newToken) {
-        headers['x-provider-token'] = newToken
-        const retry = await supabase.functions.invoke(fnName, { body, headers })
-        if (retry.error) throw new Error(retry.error.message)
-        return retry.data
-      }
-    }
-    throw new Error(error.message)
-  }
-  return data
 }
 
 // ── GSC API（direct browser → Google Search Console API）────────────
@@ -387,11 +340,13 @@ export const emailLoginApi = {
     const b64 = btoa(String.fromCharCode(...new Uint8Array(bits)))
     const hash = 'pbkdf2:' + b64
 
-    const { data, error } = await supabase.functions.invoke('email-login', {
-      body: { action: 'login', email, password: hash }
+    const r = await fetch(`${API_BASE}/api/email-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: hash }),
     })
-    if (error) throw new Error(error.message)
-    if (data?.error) throw new Error(data.error)
+    const data = await r.json()
+    if (!r.ok) throw new Error(data?.error || 'Login failed')
     return data
   }
 }

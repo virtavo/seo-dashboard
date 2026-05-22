@@ -1,3 +1,11 @@
-name = "seo-dashboard"
-pages_build_output_dir = "dist"
+name = "seo-dashboard-api"
+main = "worker.js"
 compatibility_date = "2024-11-01"
+account_id = "de25ce3e1429d975c50ed828609a5243"
+
+[vars]
+ADMIN_EMAIL = "homevirtavo@gmail.com"
+
+[[kv_namespaces]]
+binding = "SEO_SESSIONS"
+id = "03ca244117504edf926152634dc17435"

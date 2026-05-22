@@ -33,6 +33,7 @@ export default function Analytics({ providerToken, ga4PropertyId, ga4Properties 
   const [countries, setCountries] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [showGaDD, setShowGaDD] = useState(false)
+  const [manualId, setManualId] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [aiInsights, setAiInsights] = useState<Record<string, any>>({})
   const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({})
@@ -137,10 +138,28 @@ export default function Analytics({ providerToken, ga4PropertyId, ga4Properties 
         <div style={{ position: 'absolute', top: '110%', left: 0, background: '#fff', border: '1.5px solid #a7f3d0', borderRadius: 10, boxShadow: '0 8px 24px rgba(16,185,129,0.15)', zIndex: 200, minWidth: 340, maxHeight: 280, overflowY: 'auto' }}
           onClick={e => e.stopPropagation()}>
           {ga4Properties.length === 0 ? (
-            <div style={{ padding: '12px 14px', fontSize: 12, color: '#94a3b8' }}>
-              {ga4Error === 'token_expired' ? '⚠️ Session expired. Please re-login.' :
-               ga4Error === 'no_properties' ? 'No GA4 properties found. Re-login to grant access.' :
-               'No GA4 properties available.'}
+            <div style={{ padding: '12px 14px' }}>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>
+                {ga4Error === 'token_expired' ? '⚠️ Session expired — please re-login.' :
+                 '⚠️ No GA4 properties auto-detected. Enter Property ID manually:'}
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  type="text"
+                  placeholder="e.g. 484037200"
+                  value={manualId}
+                  onChange={e => setManualId(e.target.value.replace(/\D/g, ''))}
+                  style={{ flex: 1, padding: '6px 10px', fontSize: 12, border: '1px solid #a7f3d0', borderRadius: 6, outline: 'none', color: '#065f46' }}
+                />
+                <button
+                  onClick={() => { if (manualId) { onPropertyChange?.(manualId); setShowGaDD(false) } }}
+                  style={{ padding: '6px 12px', fontSize: 12, background: '#065f46', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>
+                  Use
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
+                Find your ID in GA4 → Admin → Property Settings
+              </div>
             </div>
           ) : (
             ga4Properties.map(p => (
@@ -161,7 +180,23 @@ export default function Analytics({ providerToken, ga4PropertyId, ga4Properties 
       <PropertySelector />
       <div style={{ ...card, textAlign: 'center', padding: 60 }}>
         <Globe2 size={40} style={{ color: '#cbd5e1', margin: '0 auto 16px' }} />
-        <p style={{ color: '#94a3b8', fontWeight: 500 }}>Select a GA4 property above to view Analytics data</p>
+        <p style={{ color: '#94a3b8', fontWeight: 500, marginBottom: 16 }}>Select a GA4 property above to view Analytics data</p>
+        {ga4Properties.length === 0 && (
+          <div style={{ display: 'inline-flex', gap: 8, alignItems: 'center', justifyContent: 'center' }}>
+            <input
+              type="text"
+              placeholder="Enter GA4 Property ID (e.g. 484037200)"
+              value={manualId}
+              onChange={e => setManualId(e.target.value.replace(/\D/g, ''))}
+              style={{ padding: '8px 14px', fontSize: 13, border: '1.5px solid #a7f3d0', borderRadius: 8, outline: 'none', color: '#065f46', width: 260 }}
+            />
+            <button
+              onClick={() => { if (manualId) onPropertyChange?.(manualId) }}
+              style={{ padding: '8px 18px', fontSize: 13, background: '#065f46', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
+              Load Data
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

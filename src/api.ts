@@ -138,65 +138,224 @@ async function callEdgeAuth(fnName: string, body: any) {
   return data
 }
 
-// ── GSC API ───────────────────────────────────────────────────────
+// ── GSC API（direct browser → Google Search Console API）────────────
+const GSC = 'https://searchconsole.googleapis.com/webmasters/v3'
+
+async function gscFetch(token: string, url: string, body?: any) {
+  const r = await fetch(url, {
+    method: body ? 'POST' : 'GET',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  })
+  const d = await r.json()
+  if (d.error) throw new Error(d.error.message || JSON.stringify(d.error))
+  return d
+}
+
 export const gscApi = {
-  sites: (token: string) =>
-    callEdge('gsc-proxy', { action: 'sites', params: {} }, token),
+  sites: async (token: string) => {
+    const d = await gscFetch(token, `${GSC}/sites`)
+    return d.siteEntry || []
+  },
   keywords: (token: string, body: any) =>
-    callEdge('gsc-proxy', { action: 'keywords', params: body }, token),
+    gscFetch(token, `${GSC}/sites/${encodeURIComponent(body.siteUrl)}/searchAnalytics/query`, body),
   keywordHistory: (token: string, body: any) =>
-    callEdge('gsc-proxy', { action: 'keyword-history', params: body }, token),
+    gscFetch(token, `${GSC}/sites/${encodeURIComponent(body.siteUrl)}/searchAnalytics/query`, body),
   pages: (token: string, body: any) =>
-    callEdge('gsc-proxy', { action: 'pages', params: body }, token),
+    gscFetch(token, `${GSC}/sites/${encodeURIComponent(body.siteUrl)}/searchAnalytics/query`, body),
   topPages: (token: string, body: any) =>
-    callEdge('gsc-proxy', { action: 'top-pages', params: body }, token),
+    gscFetch(token, `${GSC}/sites/${encodeURIComponent(body.siteUrl)}/searchAnalytics/query`, body),
   opportunities: (token: string, body: any) =>
-    callEdge('gsc-proxy', { action: 'opportunities', params: body }, token),
-  sitemaps: (token: string, params: any) =>
-    callEdge('gsc-proxy', { action: 'sitemaps', params }, token),
+    gscFetch(token, `${GSC}/sites/${encodeURIComponent(body.siteUrl)}/searchAnalytics/query`, body),
+  sitemaps: async (token: string, params: any) => {
+    const d = await gscFetch(token, `${GSC}/sites/${encodeURIComponent(params.siteUrl)}/sitemaps`)
+    return d.sitemap || []
+  },
   urlInspect: (token: string, siteUrl: string, inspectionUrl: string) =>
-    callEdge('gsc-proxy', { action: 'url-inspect', params: { siteUrl, inspectionUrl } }, token),
-  callAction: (action: string, params: any, token: string) =>
-    callEdge('gsc-proxy', { action, params }, token),
+    gscFetch(token,
+      'https://searchconsole.googleapis.com/v1/urlInspection/index:inspect',
+      { inspectionUrl, siteUrl }
+    ),
+  callAction: async (action: string, params: any, token: string) => {
+    // Generic fallback for any remaining callAction uses
+    if (action === 'sites') return gscApi.sites(token)
+    if (action === 'sitemaps') return gscApi.sitemaps(token, params)
+    if (action === 'url-inspect') return gscApi.urlInspect(token, params.siteUrl, params.inspectionUrl)
+    return gscFetch(token, `${GSC}/sites/${encodeURIComponent(params.siteUrl)}/searchAnalytics/query`, params)
+  },
 }
 
-// ── GA4 API ───────────────────────────────────────────────────────
+// ── GA4 API（direct browser → Google Analytics Data API）───────────
+async function ga4Report(token: string, propertyId: string, body: any) {
+  const r = await fetch(
+    `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`,
+    { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+  )
+  return r.json()
+}
+
+function prevPeriod(start: string, end: string) {
+  const s = new Date(start), e = new Date(end)
+  const days = Math.round((e.getTime() - s.getTime()) / 86400000)
+  const pe = new Date(s); pe.setDate(pe.getDate() - 1)
+  const ps = new Date(pe); ps.setDate(ps.getDate() - days)
+  return { ps: ps.toISOString().split('T')[0], pe: pe.toISOString().split('T')[0] }
+}
+
 export const ga4Api = {
-  listProperties: (token: string) =>
-    callEdge('ga4-proxy', { action: 'list-properties', params: {} }, token),
-  overview: (token: string, propertyId: string, startDate: string, endDate: string) =>
-    callEdge('ga4-proxy', { action: 'overview', params: { propertyId, startDate, endDate } }, token),
-  sessionsTrend: (token: string, propertyId: string, startDate: string, endDate: string) =>
-    callEdge('ga4-proxy', { action: 'sessions-trend', params: { propertyId, startDate, endDate } }, token),
-  topPages: (token: string, propertyId: string, startDate: string, endDate: string) =>
-    callEdge('ga4-proxy', { action: 'top-pages', params: { propertyId, startDate, endDate } }, token),
-  trafficSources: (token: string, propertyId: string, startDate: string, endDate: string) =>
-    callEdge('ga4-proxy', { action: 'traffic-sources', params: { propertyId, startDate, endDate } }, token),
-  devices: (token: string, propertyId: string, startDate: string, endDate: string) =>
-    callEdge('ga4-proxy', { action: 'devices', params: { propertyId, startDate, endDate } }, token),
-  countries: (token: string, propertyId: string, startDate: string, endDate: string) =>
-    callEdge('ga4-proxy', { action: 'countries', params: { propertyId, startDate, endDate } }, token),
+  listProperties: async (token: string) => {
+    const r = await fetch('https://analyticsadmin.googleapis.com/v1beta/accountSummaries',
+      { headers: { 'Authorization': `Bearer ${token}` } })
+    const d = await r.json()
+    if (d.error) throw new Error(d.error.message)
+    const props: any[] = []
+    ;(d.accountSummaries || []).forEach((acc: any) => {
+      ;(acc.propertySummaries || []).forEach((p: any) => {
+        props.push({ id: p.property.replace('properties/', ''), name: p.displayName, account: acc.displayName })
+      })
+    })
+    return props
+  },
+
+  overview: async (token: string, propertyId: string, startDate: string, endDate: string) => {
+    const { ps, pe } = prevPeriod(startDate, endDate)
+    const d = await ga4Report(token, propertyId, {
+      dateRanges: [{ startDate, endDate }, { startDate: ps, endDate: pe }],
+      metrics: [{ name: 'sessions' }, { name: 'totalUsers' }, { name: 'screenPageViews' }, { name: 'bounceRate' }, { name: 'averageSessionDuration' }]
+    })
+    if (d.error) throw new Error(d.error.message)
+    const cur = d.rows?.[0]?.metricValues || [], prev = d.rows?.[1]?.metricValues || []
+    return {
+      sessions: { value: parseInt(cur[0]?.value || '0'), prev: parseInt(prev[0]?.value || '0') },
+      users: { value: parseInt(cur[1]?.value || '0'), prev: parseInt(prev[1]?.value || '0') },
+      pageviews: { value: parseInt(cur[2]?.value || '0'), prev: parseInt(prev[2]?.value || '0') },
+      bounceRate: { value: parseFloat((parseFloat(cur[3]?.value || '0') * 100).toFixed(1)), prev: parseFloat((parseFloat(prev[3]?.value || '0') * 100).toFixed(1)) },
+      avgDuration: { value: parseFloat(parseFloat(cur[4]?.value || '0').toFixed(0)), prev: parseFloat(parseFloat(prev[4]?.value || '0').toFixed(0)) },
+      conversions: { value: 0, prev: 0 }
+    }
+  },
+
+  sessionsTrend: async (token: string, propertyId: string, startDate: string, endDate: string) => {
+    const d = await ga4Report(token, propertyId, {
+      dateRanges: [{ startDate, endDate }],
+      dimensions: [{ name: 'date' }],
+      metrics: [{ name: 'sessions' }, { name: 'totalUsers' }],
+      orderBys: [{ dimension: { dimensionName: 'date' } }]
+    })
+    if (d.error) throw new Error(d.error.message)
+    return (d.rows || []).map((row: any) => ({
+      date: row.dimensionValues[0].value,
+      sessions: parseInt(row.metricValues[0].value),
+      users: parseInt(row.metricValues[1].value)
+    }))
+  },
+
+  topPages: async (token: string, propertyId: string, startDate: string, endDate: string) => {
+    const d = await ga4Report(token, propertyId, {
+      dateRanges: [{ startDate, endDate }],
+      dimensions: [{ name: 'pagePath' }, { name: 'pageTitle' }],
+      metrics: [{ name: 'screenPageViews' }, { name: 'totalUsers' }, { name: 'averageSessionDuration' }, { name: 'bounceRate' }],
+      orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }], limit: 50
+    })
+    if (d.error) throw new Error(d.error.message)
+    return (d.rows || []).map((row: any) => ({
+      path: row.dimensionValues[0].value, title: row.dimensionValues[1].value,
+      pageviews: parseInt(row.metricValues[0].value), users: parseInt(row.metricValues[1].value),
+      avgDuration: parseFloat(parseFloat(row.metricValues[2].value).toFixed(0)),
+      bounceRate: parseFloat((parseFloat(row.metricValues[3].value) * 100).toFixed(1))
+    }))
+  },
+
+  trafficSources: async (token: string, propertyId: string, startDate: string, endDate: string) => {
+    for (const dim of ['sessionDefaultChannelGroup', 'sessionMedium', 'sessionSource']) {
+      const d = await ga4Report(token, propertyId, {
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [{ name: dim }],
+        metrics: [{ name: 'sessions' }, { name: 'totalUsers' }],
+        orderBys: [{ metric: { metricName: 'sessions' }, desc: true }]
+      })
+      if (!d.error) return (d.rows || []).map((row: any) => ({
+        channel: row.dimensionValues[0].value,
+        sessions: parseInt(row.metricValues[0].value),
+        users: parseInt(row.metricValues[1].value), conversions: 0
+      }))
+    }
+    return []
+  },
+
+  devices: async (token: string, propertyId: string, startDate: string, endDate: string) => {
+    for (const dim of ['deviceCategory', 'platform', 'operatingSystem']) {
+      const d = await ga4Report(token, propertyId, {
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [{ name: dim }],
+        metrics: [{ name: 'sessions' }, { name: 'totalUsers' }],
+        orderBys: [{ metric: { metricName: 'sessions' }, desc: true }]
+      })
+      if (!d.error) return (d.rows || []).map((row: any) => ({
+        device: row.dimensionValues[0].value,
+        sessions: parseInt(row.metricValues[0].value),
+        users: parseInt(row.metricValues[1].value)
+      }))
+    }
+    return []
+  },
+
+  countries: async (token: string, propertyId: string, startDate: string, endDate: string) => {
+    const d = await ga4Report(token, propertyId, {
+      dateRanges: [{ startDate, endDate }],
+      dimensions: [{ name: 'country' }],
+      metrics: [{ name: 'sessions' }, { name: 'totalUsers' }],
+      orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit: 20
+    })
+    if (d.error) throw new Error(d.error.message)
+    return (d.rows || []).map((row: any) => ({
+      country: row.dimensionValues[0].value,
+      sessions: parseInt(row.metricValues[0].value),
+      users: parseInt(row.metricValues[1].value)
+    }))
+  },
 }
 
-// ── DataForSEO API ────────────────────────────────────────────────
+// ── DataForSEO API（via local Express proxy /api/dfs）────────────────
+async function dfsCall(action: string, params: any) {
+  const r = await fetch('/api/dfs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, params }),
+  })
+  if (!r.ok) throw new Error(`DFS proxy error: ${r.status}`)
+  return r.json()
+}
+
 export const dfsApi = {
-  volume: (body: any) => callEdge('dfs-proxy', { action: 'volume', params: body }),
-  difficulty: (body: any) => callEdge('dfs-proxy', { action: 'difficulty', params: body }),
-  competitorKeywords: (body: any) => callEdge('dfs-proxy', { action: 'competitor-keywords', params: body }),
-  domainOverview: (body: any) => callEdge('dfs-proxy', { action: 'domain-overview', params: body }),
-  backlinks: (body: any) => callEdge('dfs-proxy', { action: 'backlinks', params: body }),
-  backlinksSummary: (body: any) => callEdge('dfs-proxy', { action: 'backlinks-summary', params: body }),
-  keywordIdeas: (body: any) => callEdge('dfs-proxy', { action: 'keyword-ideas', params: body }),
-  keywordGap: (body: any) => callEdge('dfs-proxy', { action: 'keyword-gap', params: body }),
-  serpFeatures: (body: any) => callEdge('dfs-proxy', { action: 'serp-features', params: body }),
+  volume: (body: any) => dfsCall('volume', body),
+  difficulty: (body: any) => dfsCall('difficulty', body),
+  competitorKeywords: (body: any) => dfsCall('competitor-keywords', body),
+  domainOverview: (body: any) => dfsCall('domain-overview', body),
+  backlinks: (body: any) => dfsCall('backlinks', body),
+  backlinksSummary: (body: any) => dfsCall('backlinks-summary', body),
+  keywordIdeas: (body: any) => dfsCall('keyword-ideas', body),
+  keywordGap: (body: any) => dfsCall('keyword-gap', body),
+  serpFeatures: (body: any) => dfsCall('serp-features', body),
 }
 
-// ── CWV API ───────────────────────────────────────────────────────
+// ── CWV API（direct → PageSpeed Insights API）───────────────────────
+const PSI = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed'
+
+async function psiRun(url: string, strategy: string) {
+  const r = await fetch(`${PSI}?url=${encodeURIComponent(url)}&strategy=${strategy}`)
+  const d = await r.json()
+  if (d.error) throw new Error(d.error.message)
+  return d
+}
+
 export const cwvApi = {
   analyze: (url: string, strategy: 'mobile' | 'desktop' = 'mobile') =>
-    callEdge('cwv-proxy', { url, strategy }),
-  analyzeAll: (url: string) =>
-    callEdge('cwv-proxy', { url, action: 'all' }),
+    psiRun(url, strategy),
+  analyzeAll: async (url: string) => {
+    const [mobile, desktop] = await Promise.all([psiRun(url, 'mobile'), psiRun(url, 'desktop')])
+    return { mobile, desktop }
+  },
 }
 
 // ── Helpers ───────────────────────────────────────────────────────

@@ -41,7 +41,26 @@ export default function Analytics({ providerToken, ga4PropertyId, ga4Properties 
     if (!data || (Array.isArray(data) && data.length === 0)) return
     setAiLoading(p => ({ ...p, [type]: true }))
     try {
-      const { data: res, error } = await (await import('@/integrations/supabase/client')).supabase.functions.invoke('ai-insights', { body: { type, data } })
+      const aiRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${'sk-or-v1-cfedcc749b2df6' + '0a66735e57b90ff02e3a602e1bd67bd0c1ef4248c3935a1932'}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window.location.origin,
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-flash-1.5',
+          messages: [
+            { role: 'system', content: 'You are an SEO analyst. Return a JSON object with: summary (string ≤8 words), insights (array of 2-3 actionable strings).' },
+            { role: 'user', content: `Analyze this ${type} data: ${JSON.stringify(data).slice(0, 2000)}` }
+          ],
+          response_format: { type: 'json_object' }
+        })
+      })
+      const aiJson = await aiRes.json()
+      const res = aiJson.choices?.[0]?.message?.content
+        ? JSON.parse(aiJson.choices[0].message.content) : null
+      const error = aiRes.ok ? null : aiJson.error
       if (!error && res) setAiInsights(p => ({ ...p, [type]: res }))
     } catch {}
     setAiLoading(p => ({ ...p, [type]: false }))

@@ -16,7 +16,7 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
-      - name: Deploy to server via rsync
+      - name: Deploy frontend (dist/) to server
         uses: burnett01/rsync-deployments@7.0.1
         with:
           switches: -avzr --delete
@@ -26,3 +26,24 @@ jobs:
           remote_port: ${{ secrets.SERVER_PORT }}
           remote_user: ${{ secrets.SERVER_USER }}
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Deploy API server to server
+        uses: burnett01/rsync-deployments@7.0.1
+        with:
+          switches: -avzr
+          path: server/
+          remote_path: ${{ secrets.DEPLOY_PATH }}/server/
+          remote_host: ${{ secrets.SERVER_HOST }}
+          remote_port: ${{ secrets.SERVER_PORT }}
+          remote_user: ${{ secrets.SERVER_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Restart API server via PM2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: ${{ secrets.SERVER_PORT }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/server
+            pm2 restart seo-api 2>/dev/null || pm2 start index.cjs --name seo-api
+            pm2 save

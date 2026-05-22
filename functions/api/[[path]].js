@@ -90,7 +90,7 @@ export async function onRequest(context) {
       redirect_uri: `${SERVER_URL}/api/oauth/callback`,
       grant_type: 'authorization_code',
     })
-    if (tokens.error) return redir(`${redirectTo}?auth_error=token_exchange`)
+    if (tokens.error) return redir(`${redirectTo}?auth_error=${encodeURIComponent(tokens.error)}:${encodeURIComponent(tokens.error_description||'')}`)
 
     const userInfo = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` }
@@ -154,6 +154,16 @@ export async function onRequest(context) {
       body,
     })
     return json(await r.json())
+  }
+
+  // Debug: check env bindings (no secret values exposed)
+  if (p === '/api/debug') {
+    return json({
+      client_id_set: !!CLIENT_ID,
+      client_secret_set: !!CLIENT_SEC,
+      kv_set: !!env.SEO_SESSIONS,
+      client_id_prefix: CLIENT_ID.slice(0,20),
+    })
   }
 
   return json({ error: 'Not found' }, 404)

@@ -1,8 +1,6 @@
 // Cloudflare Worker — SEO Dashboard API
 // Replaces server/index.cjs (Node.js + PM2 on VPS)
 
-const CLIENT_ID  = env.GOOGLE_CLIENT_ID  || ''
-const CLIENT_SEC = env.GOOGLE_CLIENT_SECRET || ''
 const ADMIN_EMAIL = 'homevirtavo@gmail.com'
 const DFS_AUTH   = btoa('chloelee@puwell.com:a91b3259983a4853')
 const SCOPES = [
@@ -63,6 +61,8 @@ export default {
     const url = new URL(req.url)
     const p = url.pathname
     const SERVER_URL = `https://${url.hostname}`
+    const CLIENT_ID  = env.GOOGLE_CLIENT_ID  || ''
+    const CLIENT_SEC = env.GOOGLE_CLIENT_SECRET || ''
 
     if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 

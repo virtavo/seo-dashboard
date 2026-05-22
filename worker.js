@@ -1,8 +1,8 @@
 // Cloudflare Worker — SEO Dashboard API
 // Replaces server/index.cjs (Node.js + PM2 on VPS)
 
-const CLIENT_ID  = '543084749909-v88o8qoea0s1vh3etg1vbhkkm2b572d4.apps.googleusercontent.com'
-const CLIENT_SEC = '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'
+const CLIENT_ID  = env.GOOGLE_CLIENT_ID  || ''
+const CLIENT_SEC = env.GOOGLE_CLIENT_SECRET || ''
 const ADMIN_EMAIL = 'homevirtavo@gmail.com'
 const DFS_AUTH   = btoa('chloelee@puwell.com:a91b3259983a4853')
 const SCOPES = [

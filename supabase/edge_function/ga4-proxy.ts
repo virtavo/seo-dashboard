@@ -140,7 +140,16 @@ Deno.serve(async (req) => {
         })
         d = await r.json()
       }
-      if (d.error) throw new Error(`[${usedDim}] ${d.error.message || JSON.stringify(d.error)}`)
+      if (d.error) {
+        // All three fallback dimensions failed — return structured error (200) so
+        // the frontend can surface the real GA4 message instead of the generic
+        // "Edge Function returned a non-2xx status code" from a 500 response.
+        const realMsg = `[${usedDim}] ${d.error.message || JSON.stringify(d.error)}`
+        return new Response(
+          JSON.stringify({ error: realMsg, _graceful: true }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
       result = (d.rows || []).map((row: any) => ({
         channel: row.dimensionValues[0].value,
         sessions: parseInt(row.metricValues[0].value),
@@ -150,18 +159,40 @@ Deno.serve(async (req) => {
 
     // ── Devices breakdown ─────────────────────────────────────────────
     } else if (action === 'devices') {
-      const r = await fetch(`${gaBase}:runReport`, {
+      // Try deviceCategory → platform → operatingSystem (progressively broader)
+      const deviceDims = ['deviceCategory', 'platform', 'operatingSystem']
+      let dDim = deviceDims[0]
+      let dr = await fetch(`${gaBase}:runReport`, {
         method: 'POST', headers: authHeader,
         body: JSON.stringify({
           dateRanges: [{ startDate, endDate }],
-          dimensions: [{ name: 'deviceCategory' }],
+          dimensions: [{ name: dDim }],
           metrics: [{ name: 'sessions' }, { name: 'totalUsers' }],
           orderBys: [{ metric: { metricName: 'sessions' }, desc: true }]
         })
       })
-      const d = await r.json()
-      if (d.error) throw new Error(d.error.message)
-      result = (d.rows || []).map((row: any) => ({
+      let dd = await dr.json()
+      for (let i = 1; i < deviceDims.length && dd.error; i++) {
+        dDim = deviceDims[i]
+        dr = await fetch(`${gaBase}:runReport`, {
+          method: 'POST', headers: authHeader,
+          body: JSON.stringify({
+            dateRanges: [{ startDate, endDate }],
+            dimensions: [{ name: dDim }],
+            metrics: [{ name: 'sessions' }, { name: 'totalUsers' }],
+            orderBys: [{ metric: { metricName: 'sessions' }, desc: true }]
+          })
+        })
+        dd = await dr.json()
+      }
+      if (dd.error) {
+        const realMsg = `[${dDim}] ${dd.error.message || JSON.stringify(dd.error)}`
+        return new Response(
+          JSON.stringify({ error: realMsg, _graceful: true }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      result = (dd.rows || []).map((row: any) => ({
         device: row.dimensionValues[0].value,
         sessions: parseInt(row.metricValues[0].value),
         users: parseInt(row.metricValues[1].value)

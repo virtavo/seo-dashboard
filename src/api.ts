@@ -99,7 +99,21 @@ async function callEdge(fnName: string, body: any, providerToken?: string) {
   const headers: Record<string, string> = {}
   if (providerToken) headers['x-provider-token'] = providerToken
   const { data, error } = await supabase.functions.invoke(fnName, { body, headers })
-  if (error) throw new Error(error.message)
+  if (error) {
+    // Supabase SDK masks real edge-function errors with a generic message.
+    // Try to extract the actual error body from the response context.
+    try {
+      const ctx = (error as any).context
+      if (ctx) {
+        const errBody = typeof ctx.json === 'function' ? await ctx.json() : null
+        if (errBody?.error) throw new Error(errBody.error)
+      }
+    } catch (inner: any) {
+      // Only re-throw if we got a real message (not the same generic one)
+      if (inner.message && inner.message !== error.message) throw inner
+    }
+    throw new Error(error.message)
+  }
   return data
 }
 

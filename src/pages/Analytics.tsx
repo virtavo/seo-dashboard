@@ -72,10 +72,17 @@ export default function Analytics({ providerToken, ga4PropertyId, ga4Properties 
       } else { errs.trend = (results[0] as PromiseRejectedResult).reason?.message || 'API error' }
       if (results[1].status === 'fulfilled') setPages(safeArr(results[1].value))
       else errs.pages = (results[1] as PromiseRejectedResult).reason?.message || 'API error'
-      if (results[2].status === 'fulfilled') setSources(safeArr(results[2].value))
-      else errs.sources = (results[2] as PromiseRejectedResult).reason?.message || 'API error'
-      if (results[3].status === 'fulfilled') setDevices(safeArr(results[3].value))
-      else errs.devices = (results[3] as PromiseRejectedResult).reason?.message || 'API error'
+      if (results[2].status === 'fulfilled') {
+        const v2 = results[2].value
+        // Graceful error: edge fn returned 200 + { error, _graceful }
+        if (v2?._graceful && v2?.error) errs.sources = v2.error
+        else setSources(safeArr(v2))
+      } else { errs.sources = (results[2] as PromiseRejectedResult).reason?.message || 'API error' }
+      if (results[3].status === 'fulfilled') {
+        const v3 = results[3].value
+        if (v3?._graceful && v3?.error) errs.devices = v3.error
+        else setDevices(safeArr(v3))
+      } else { errs.devices = (results[3] as PromiseRejectedResult).reason?.message || 'API error' }
       if (results[4].status === 'fulfilled') setCountries(safeArr(results[4].value))
       else errs.countries = (results[4] as PromiseRejectedResult).reason?.message || 'API error'
       setErrors(errs)
@@ -253,9 +260,9 @@ export default function Analytics({ providerToken, ga4PropertyId, ga4Properties 
           ) : (
             <div style={{ padding: '12px 0' }}>
               {errors.sources ? (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px' }}>
-                  <p style={{ color: '#dc2626', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>⚠️ Failed to load Traffic Sources</p>
-                  <p style={{ color: '#b91c1c', fontSize: 11, fontFamily: 'monospace', wordBreak: 'break-all' }}>{errors.sources}</p>
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px' }}>
+                  <p style={{ color: '#92400e', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>⚠️ Traffic Sources unavailable</p>
+                  <p style={{ color: '#78350f', fontSize: 11, fontFamily: 'monospace', wordBreak: 'break-all' }}>{errors.sources}</p>
                 </div>
               ) : (
                 <p style={{ color: '#94a3b8', fontSize: 13 }}>No data for the selected period</p>
@@ -307,9 +314,9 @@ export default function Analytics({ providerToken, ga4PropertyId, ga4Properties 
           ) : (
             <div style={{ padding: '12px 0' }}>
               {errors.devices ? (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px' }}>
-                  <p style={{ color: '#dc2626', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>⚠️ Failed to load Devices</p>
-                  <p style={{ color: '#b91c1c', fontSize: 11, fontFamily: 'monospace', wordBreak: 'break-all' }}>{errors.devices}</p>
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px' }}>
+                  <p style={{ color: '#92400e', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>⚠️ Devices data unavailable</p>
+                  <p style={{ color: '#78350f', fontSize: 11, fontFamily: 'monospace', wordBreak: 'break-all' }}>{errors.devices}</p>
                 </div>
               ) : (
                 <p style={{ color: '#94a3b8', fontSize: 13 }}>No data for the selected period</p>

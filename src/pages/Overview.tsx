@@ -181,19 +181,28 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
           'HTTP-Referer': window.location.origin,
         },
         body: JSON.stringify({
-          model: 'google/gemini-flash-1.5',
+          model: 'google/gemini-2.0-flash-001',
           messages: [
-            { role: 'system', content: 'You are an SEO analyst. Respond with ONLY a raw JSON object — no markdown, no code fences. Format: {"summary":"≤8 words","insights":["insight 1","insight 2","insight 3"]}' },
-            { role: 'user', content: `Analyze this GSC ${type} data and give 3 actionable SEO insights: ${JSON.stringify(data).slice(0, 2000)}` }
+            { role: 'system', content: 'You are a concise SEO analyst. Reply with ONLY valid JSON, no markdown. Schema: {"summary":"max 8 words","insights":["tip1","tip2","tip3"]}' },
+            { role: 'user', content: `GSC ${type} data (JSON): ${JSON.stringify(data).slice(0, 1800)}` }
           ]
         })
       })
+      if (!aiRes.ok) {
+        const errText = await aiRes.text()
+        console.warn('[AI] HTTP', aiRes.status, errText.slice(0, 200))
+        return
+      }
       const aiJson = await aiRes.json()
-      const rawContent = aiJson.choices?.[0]?.message?.content
-      if (rawContent) {
-        const cleaned = rawContent.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
-        const res = JSON.parse(cleaned)
-        if (res?.insights) setAiInsights(p => ({ ...p, [type]: res }))
+      const rawContent = aiJson.choices?.[0]?.message?.content ?? ''
+      // strip code fences, find first { ... }
+      const stripped = rawContent.replace(/^```[\w]*\n?/m, '').replace(/\n?```$/m, '').trim()
+      const jsonMatch = stripped.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        const res = JSON.parse(jsonMatch[0])
+        if (Array.isArray(res?.insights) && res.insights.length > 0) {
+          setAiInsights(p => ({ ...p, [type]: res }))
+        }
       }
     } catch (e) {
       console.warn('[AI]', type, e)

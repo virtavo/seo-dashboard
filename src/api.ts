@@ -92,6 +92,22 @@ export async function loadSession() {
 }
 
 // ── GSC API（direct browser → Google Search Console API）────────────
+
+// Helper: unpack GSC { rows:[{keys:[],clicks,impressions,ctr,position}] }
+// and rename keys[i] to the named dimension props
+function mapGscRows(d: any, dimProps: string[]): any[] {
+  const rows: any[] = d?.rows ?? []
+  return rows.map((row: any) => {
+    const out: any = {
+      clicks: row.clicks ?? 0,
+      impressions: row.impressions ?? 0,
+      ctr: row.ctr ?? 0,
+      position: row.position ?? 0,
+    }
+    dimProps.forEach((prop, i) => { out[prop] = row.keys?.[i] ?? '' })
+    return out
+  })
+}
 const GSC = 'https://searchconsole.googleapis.com/webmasters/v3'
 
 async function gscFetch(token: string, url: string, body?: any) {
@@ -110,16 +126,25 @@ export const gscApi = {
     const d = await gscFetch(token, `${GSC}/sites`)
     return d.siteEntry || []
   },
-  keywords: (token: string, body: any) =>
-    gscFetch(token, `${GSC}/sites/${encodeURIComponent(body.siteUrl)}/searchAnalytics/query`, body),
+  keywords: async (token: string, body: any) => {
+    const d = await gscFetch(token, `${GSC}/sites/${encodeURIComponent(body.siteUrl)}/searchAnalytics/query`,
+      { ...body, dimensions: ['query'] })
+    return mapGscRows(d, ['keyword'])
+  },
   keywordHistory: (token: string, body: any) =>
     gscFetch(token, `${GSC}/sites/${encodeURIComponent(body.siteUrl)}/searchAnalytics/query`, body),
   pages: (token: string, body: any) =>
     gscFetch(token, `${GSC}/sites/${encodeURIComponent(body.siteUrl)}/searchAnalytics/query`, body),
-  topPages: (token: string, body: any) =>
-    gscFetch(token, `${GSC}/sites/${encodeURIComponent(body.siteUrl)}/searchAnalytics/query`, body),
-  opportunities: (token: string, body: any) =>
-    gscFetch(token, `${GSC}/sites/${encodeURIComponent(body.siteUrl)}/searchAnalytics/query`, body),
+  topPages: async (token: string, body: any) => {
+    const d = await gscFetch(token, `${GSC}/sites/${encodeURIComponent(body.siteUrl)}/searchAnalytics/query`,
+      { ...body, dimensions: ['page'] })
+    return mapGscRows(d, ['page'])
+  },
+  opportunities: async (token: string, body: any) => {
+    const d = await gscFetch(token, `${GSC}/sites/${encodeURIComponent(body.siteUrl)}/searchAnalytics/query`,
+      { ...body, dimensions: ['query'] })
+    return mapGscRows(d, ['keyword'])
+  },
   sitemaps: async (token: string, params: any) => {
     const d = await gscFetch(token, `${GSC}/sites/${encodeURIComponent(params.siteUrl)}/sitemaps`)
     return d.sitemap || []
@@ -141,9 +166,17 @@ export const gscApi = {
       'opportunities': ['query'],
       'top-keywords-by-page': ['query'],
     }
+    const propMap: Record<string, string[]> = {
+      'performance-trend': ['date'],
+      'by-country': ['country'],
+      'by-device': ['device'],
+      'opportunities': ['keyword'],
+      'top-keywords-by-page': ['keyword'],
+    }
     const body = { ...params }
     if (dimMap[action] && !body.dimensions) body.dimensions = dimMap[action]
-    return gscFetch(token, `${GSC}/sites/${encodeURIComponent(params.siteUrl)}/searchAnalytics/query`, body)
+    const d = await gscFetch(token, `${GSC}/sites/${encodeURIComponent(params.siteUrl)}/searchAnalytics/query`, body)
+    return mapGscRows(d, propMap[action] ?? ['keyword'])
   },
 }
 
@@ -323,7 +356,7 @@ export const cwvApi = {
 // ── Helpers ───────────────────────────────────────────────────────
 export function safeArr(r: any): any[] {
   if (Array.isArray(r)) return r
-  if (Array.isArray(r?.rows)) return r.rows  // GSC searchAnalytics returns { rows: [] }
+  if (Array.isArray(r?.rows)) return r.rows
   if (Array.isArray(r?.data)) return r.data
   return []
 }

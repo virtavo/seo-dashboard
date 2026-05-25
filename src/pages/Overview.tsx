@@ -97,6 +97,8 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
   const [selectedPage, setSelectedPage] = useState<string | null>(null)
   const [pageKeywords, setPageKeywords] = useState<any[]>([])
   const [pageKwLoading, setPageKwLoading] = useState(false)
+  const [aiInsights, setAiInsights] = useState<Record<string, any>>({})
+  const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({})
 
   const endDate = format(new Date(), 'yyyy-MM-dd')
   const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd')
@@ -140,6 +142,17 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
     setOpportunities(safeArr(get(7)).slice(0, 10))
 
     setLoading(false)
+
+    // Trigger AI analysis
+    const aiTasks: Array<[string, any]> = []
+    if (kws.length) aiTasks.push(['keywords', kws.slice(0, 30)])
+    if (get(2)) aiTasks.push(['performance-trend', safeArr(get(2)).slice(0, 30)])
+    if (get(3)) aiTasks.push(['top-pages', safeArr(get(3)).slice(0, 20)])
+    if (get(7)) aiTasks.push(['opportunities', safeArr(get(7)).slice(0, 20)])
+    for (const [type, data] of aiTasks) {
+      fetchAI(type, data)
+      await new Promise(r => setTimeout(r, 700))
+    }
   }, [siteUrl, providerToken, startDate, endDate, prevStart, prevEnd])
 
   useEffect(() => { load() }, [load])
@@ -155,6 +168,34 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
     setPageKwLoading(false)
   }
 
+
+  async function fetchAI(type: string, data: any) {
+    if (!data || (Array.isArray(data) && data.length === 0)) return
+    setAiLoading(p => ({ ...p, [type]: true }))
+    try {
+      const aiRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${'sk-or-v1-cfedcc749b2df6' + '0a66735e57b90ff02e3a602e1bd67bd0c1ef4248c3935a1932'}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window.location.origin,
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-flash-1.5',
+          messages: [
+            { role: 'system', content: 'You are an SEO analyst. Return a JSON object with: summary (string ≤8 words), insights (array of 2-3 actionable strings).' },
+            { role: 'user', content: `Analyze this GSC ${type} data: ${JSON.stringify(data).slice(0, 2000)}` }
+          ],
+          response_format: { type: 'json_object' }
+        })
+      })
+      const aiJson = await aiRes.json()
+      const res = aiJson.choices?.[0]?.message?.content
+        ? JSON.parse(aiJson.choices[0].message.content) : null
+      if (aiRes.ok && res) setAiInsights(p => ({ ...p, [type]: res }))
+    } catch {}
+    setAiLoading(p => ({ ...p, [type]: false }))
+  }
   const posColor = (pos: number) => pos <= 3 ? '#22c55e' : pos <= 10 ? '#6366f1' : pos <= 20 ? '#f59e0b' : '#ef4444'
   const deviceIcon = (d: string) => d.toLowerCase().includes('mobile') ? <Smartphone size={14} /> : d.toLowerCase().includes('tablet') ? <Tablet size={14} /> : <Monitor size={14} />
 
@@ -275,6 +316,20 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
         </div>
       )}
 
+
+      {(aiInsights['performance-trend'] || aiLoading['performance-trend']) && (
+        <div style={{ marginTop: 14, padding: '12px 16px', background: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', border: '1px solid #bae6fd', borderRadius: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+            <span style={{ fontSize: 15 }}>🤖</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#0369a1' }}>AI Analysis</span>
+            {aiLoading['performance-trend'] && <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 4 }}>Analyzing...</span>}
+            {aiInsights['performance-trend']?.summary && <span style={{ fontSize: 11, color: '#0284c7', background: '#e0f2fe', borderRadius: 4, padding: '1px 7px', marginLeft: 'auto' }}>{aiInsights['performance-trend'].summary}</span>}
+          </div>
+          {(aiInsights['performance-trend']?.insights || []).map((ins: string, i: number) => (
+            <p key={i} style={{ fontSize: 12, color: '#0c4a6e', marginBottom: 5, lineHeight: 1.6 }}>{ins}</p>
+          ))}
+        </div>
+      )}
       {/* Top Pages by Traffic */}
       {topPages.length > 0 && (
         <div style={{ ...card }}>
@@ -350,6 +405,20 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
         </div>
       )}
 
+
+      {(aiInsights['top-pages'] || aiLoading['top-pages']) && (
+        <div style={{ marginTop: 14, padding: '12px 16px', background: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', border: '1px solid #bae6fd', borderRadius: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+            <span style={{ fontSize: 15 }}>🤖</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#0369a1' }}>AI Analysis</span>
+            {aiLoading['top-pages'] && <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 4 }}>Analyzing...</span>}
+            {aiInsights['top-pages']?.summary && <span style={{ fontSize: 11, color: '#0284c7', background: '#e0f2fe', borderRadius: 4, padding: '1px 7px', marginLeft: 'auto' }}>{aiInsights['top-pages'].summary}</span>}
+          </div>
+          {(aiInsights['top-pages']?.insights || []).map((ins: string, i: number) => (
+            <p key={i} style={{ fontSize: 12, color: '#0c4a6e', marginBottom: 5, lineHeight: 1.6 }}>{ins}</p>
+          ))}
+        </div>
+      )}
       {/* Top Keywords */}
       {topKeywords.length > 0 && (
         <div style={{ ...card }}>
@@ -388,6 +457,20 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
         </div>
       )}
 
+
+      {(aiInsights['keywords'] || aiLoading['keywords']) && (
+        <div style={{ marginTop: 14, padding: '12px 16px', background: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', border: '1px solid #bae6fd', borderRadius: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+            <span style={{ fontSize: 15 }}>🤖</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#0369a1' }}>AI Analysis</span>
+            {aiLoading['keywords'] && <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 4 }}>Analyzing...</span>}
+            {aiInsights['keywords']?.summary && <span style={{ fontSize: 11, color: '#0284c7', background: '#e0f2fe', borderRadius: 4, padding: '1px 7px', marginLeft: 'auto' }}>{aiInsights['keywords'].summary}</span>}
+          </div>
+          {(aiInsights['keywords']?.insights || []).map((ins: string, i: number) => (
+            <p key={i} style={{ fontSize: 12, color: '#0c4a6e', marginBottom: 5, lineHeight: 1.6 }}>{ins}</p>
+          ))}
+        </div>
+      )}
       {/* Country + Device */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
 
@@ -461,6 +544,20 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
         </div>
       )}
 
+
+      {(aiInsights['opportunities'] || aiLoading['opportunities']) && (
+        <div style={{ marginTop: 14, padding: '12px 16px', background: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', border: '1px solid #bae6fd', borderRadius: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+            <span style={{ fontSize: 15 }}>🤖</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#0369a1' }}>AI Analysis</span>
+            {aiLoading['opportunities'] && <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 4 }}>Analyzing...</span>}
+            {aiInsights['opportunities']?.summary && <span style={{ fontSize: 11, color: '#0284c7', background: '#e0f2fe', borderRadius: 4, padding: '1px 7px', marginLeft: 'auto' }}>{aiInsights['opportunities'].summary}</span>}
+          </div>
+          {(aiInsights['opportunities']?.insights || []).map((ins: string, i: number) => (
+            <p key={i} style={{ fontSize: 12, color: '#0c4a6e', marginBottom: 5, lineHeight: 1.6 }}>{ins}</p>
+          ))}
+        </div>
+      )}
       {/* Sitemaps */}
       {sitemaps.length > 0 && (
         <div style={{ ...card }}>

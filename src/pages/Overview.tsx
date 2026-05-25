@@ -183,17 +183,21 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
         body: JSON.stringify({
           model: 'google/gemini-flash-1.5',
           messages: [
-            { role: 'system', content: 'You are an SEO analyst. Return a JSON object with: summary (string ≤8 words), insights (array of 2-3 actionable strings).' },
-            { role: 'user', content: `Analyze this GSC ${type} data: ${JSON.stringify(data).slice(0, 2000)}` }
-          ],
-          response_format: { type: 'json_object' }
+            { role: 'system', content: 'You are an SEO analyst. Respond with ONLY a raw JSON object — no markdown, no code fences, no explanation. Format: {"summary":"≤8 words","insights":["insight 1","insight 2","insight 3"]}' },
+            { role: 'user', content: `Analyze this GSC ${type} data and give actionable SEO insights: ${JSON.stringify(data).slice(0, 2000)}` }
+          ]
         })
       })
       const aiJson = await aiRes.json()
-      const res = aiJson.choices?.[0]?.message?.content
-        ? JSON.parse(aiJson.choices[0].message.content) : null
-      if (aiRes.ok && res) setAiInsights(p => ({ ...p, [type]: res }))
-    } catch {}
+      const rawContent = aiJson.choices?.[0]?.message?.content
+      if (!rawContent) return
+      // Strip markdown code fences Gemini sometimes wraps around JSON
+      const cleaned = rawContent.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
+      const res = JSON.parse(cleaned)
+      if (aiRes.ok && res?.insights) setAiInsights(p => ({ ...p, [type]: res }))
+    } catch (e) {
+      console.warn('[AI]', type, e)
+    }
     setAiLoading(p => ({ ...p, [type]: false }))
   }
   const posColor = (pos: number) => pos <= 3 ? '#22c55e' : pos <= 10 ? '#6366f1' : pos <= 20 ? '#f59e0b' : '#ef4444'

@@ -201,7 +201,14 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
       if (jsonMatch) {
         const res = JSON.parse(jsonMatch[0])
         if (Array.isArray(res?.insights) && res.insights.length > 0) {
-          setAiInsights(p => ({ ...p, [type]: res }))
+          // Normalize: ensure summary and every insight is a plain string (prevents React error #31)
+          const safeRes = {
+            summary: typeof res.summary === 'string' ? res.summary : JSON.stringify(res.summary ?? ''),
+            insights: res.insights.map((item: any) =>
+              typeof item === 'string' ? item : (item?.text ?? item?.suggestion ?? item?.tip ?? JSON.stringify(item))
+            )
+          }
+          setAiInsights(p => ({ ...p, [type]: safeRes }))
         }
       }
     } catch (e) {

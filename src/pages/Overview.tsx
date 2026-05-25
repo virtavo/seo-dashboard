@@ -183,8 +183,8 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
         body: JSON.stringify({
           model: 'google/gemini-2.0-flash-001',
           messages: [
-            { role: 'system', content: 'You are a concise SEO analyst. Reply with ONLY valid JSON, no markdown. Schema: {"summary":"max 8 words","insights":["tip1","tip2","tip3"]}' },
-            { role: 'user', content: `GSC ${type} data (JSON): ${JSON.stringify(data).slice(0, 1800)}` }
+            { role: 'system', content: '你是一位专业的SEO顾问，分析Google Search Console数据并给出中文建议。只返回纯JSON，不要markdown代码块。格式：{"summary":"不超过10个字的总结","insights":["具体可执行的建议1，包含关键词名称和具体数值","具体可执行的建议2，说明原因和操作步骤","具体可执行的建议3，优先级最高的行动项"]}' },
+            { role: 'user', content: `分析以下GSC ${type}数据，给出3条针对showmo365.com的具体SEO优化建议（中文），每条建议要包含关键词名称、具体数值、可执行操作：${JSON.stringify(data).slice(0, 1800)}` }
           ]
         })
       })

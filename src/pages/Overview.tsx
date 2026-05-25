@@ -183,22 +183,23 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
         body: JSON.stringify({
           model: 'google/gemini-flash-1.5',
           messages: [
-            { role: 'system', content: 'You are an SEO analyst. Respond with ONLY a raw JSON object — no markdown, no code fences, no explanation. Format: {"summary":"≤8 words","insights":["insight 1","insight 2","insight 3"]}' },
-            { role: 'user', content: `Analyze this GSC ${type} data and give actionable SEO insights: ${JSON.stringify(data).slice(0, 2000)}` }
+            { role: 'system', content: 'You are an SEO analyst. Respond with ONLY a raw JSON object — no markdown, no code fences. Format: {"summary":"≤8 words","insights":["insight 1","insight 2","insight 3"]}' },
+            { role: 'user', content: `Analyze this GSC ${type} data and give 3 actionable SEO insights: ${JSON.stringify(data).slice(0, 2000)}` }
           ]
         })
       })
       const aiJson = await aiRes.json()
       const rawContent = aiJson.choices?.[0]?.message?.content
-      if (!rawContent) return
-      // Strip markdown code fences Gemini sometimes wraps around JSON
-      const cleaned = rawContent.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
-      const res = JSON.parse(cleaned)
-      if (aiRes.ok && res?.insights) setAiInsights(p => ({ ...p, [type]: res }))
+      if (rawContent) {
+        const cleaned = rawContent.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
+        const res = JSON.parse(cleaned)
+        if (res?.insights) setAiInsights(p => ({ ...p, [type]: res }))
+      }
     } catch (e) {
       console.warn('[AI]', type, e)
+    } finally {
+      setAiLoading(p => ({ ...p, [type]: false }))
     }
-    setAiLoading(p => ({ ...p, [type]: false }))
   }
   const posColor = (pos: number) => pos <= 3 ? '#22c55e' : pos <= 10 ? '#6366f1' : pos <= 20 ? '#f59e0b' : '#ef4444'
   const deviceIcon = (d: string) => d.toLowerCase().includes('mobile') ? <Smartphone size={14} /> : d.toLowerCase().includes('tablet') ? <Tablet size={14} /> : <Monitor size={14} />

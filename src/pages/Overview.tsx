@@ -38,11 +38,20 @@ const COUNTRY_NAMES: Record<string, string> = {
 
 const PIE_COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#f59e0b', '#22c55e', '#ef4444', '#ec4899']
 
-function MetricCard({ label, value, prev, color, icon, unit = '', sublabel }: any) {
+function MetricCard({ label, value, prev, color, icon, unit = '', sublabel, active, onClick }: any) {
   const change = prev > 0 ? ((value - prev) / prev * 100) : null
   const up = change !== null && change >= 0
   return (
-    <div style={{ ...card }}>
+    <div onClick={onClick} style={{
+      ...card,
+      cursor: onClick ? 'pointer' : 'default',
+      border: active ? `2px solid ${color}` : '1px solid #e2e8f0',
+      background: active ? color + '0d' : '#fff',
+      transition: 'border 0.15s, background 0.15s',
+      position: 'relative',
+      userSelect: 'none',
+    }}>
+      {active && onClick && <div style={{ position: 'absolute', top: 9, right: 9, width: 7, height: 7, borderRadius: '50%', background: color }} />}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <span style={{ fontSize: 12, color: '#64748b', fontWeight: 500 }}>{label}</span>
         <div style={{ width: 34, height: 34, borderRadius: 9, background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -99,6 +108,13 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
   const [pageKwLoading, setPageKwLoading] = useState(false)
   const [aiInsights, setAiInsights] = useState<Record<string, any>>({})
   const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({})
+  // Interactive metric toggle — which series to show in Performance Trend chart
+  const [activeMetrics, setActiveMetrics] = useState<Set<string>>(new Set(['clicks', 'impressions']))
+  const toggleMetric = (key: string) => setActiveMetrics(prev => {
+    const next = new Set(prev)
+    if (next.has(key)) { if (next.size > 1) next.delete(key) } else next.add(key)
+    return next
+  })
 
   const endDate = format(new Date(), 'yyyy-MM-dd')
   const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd')
@@ -280,44 +296,74 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards — click to toggle metric in Performance Trend chart */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 14 }}>
-        <MetricCard label="Total Clicks" value={metrics?.totalClicks || 0} prev={metrics?.prevClicks} color="#6366f1" icon={<MousePointer size={16} color="#6366f1" />} />
-        <MetricCard label="Total Impressions" value={metrics?.totalImps || 0} prev={metrics?.prevImps} color="#8b5cf6" icon={<Eye size={16} color="#8b5cf6" />} />
+        <MetricCard label="Total Clicks" value={metrics?.totalClicks || 0} prev={metrics?.prevClicks} color="#6366f1" icon={<MousePointer size={16} color="#6366f1" />} active={activeMetrics.has('clicks')} onClick={() => toggleMetric('clicks')} />
+        <MetricCard label="Total Impressions" value={metrics?.totalImps || 0} prev={metrics?.prevImps} color="#8b5cf6" icon={<Eye size={16} color="#8b5cf6" />} active={activeMetrics.has('impressions')} onClick={() => toggleMetric('impressions')} />
         <MetricCard label="Keywords Tracked" value={metrics?.kwCount || 0} prev={0} color="#06b6d4" icon={<Search size={16} color="#06b6d4" />} />
-        <MetricCard label="Avg. Position" value={metrics?.avgPos ? metrics.avgPos.toFixed(1) : '-'} prev={0} color="#f59e0b" icon={<TrendingUp size={16} color="#f59e0b" />} />
-        <MetricCard label="Avg. CTR" value={metrics?.avgCtr ? metrics.avgCtr.toFixed(2) : '-'} prev={0} color="#22c55e" icon={<Activity size={16} color="#22c55e" />} unit="%" />
+        <MetricCard label="Avg. Position" value={metrics?.avgPos ? metrics.avgPos.toFixed(1) : '-'} prev={0} color="#f59e0b" icon={<TrendingUp size={16} color="#f59e0b" />} active={activeMetrics.has('position')} onClick={() => toggleMetric('position')} />
+        <MetricCard label="Avg. CTR" value={metrics?.avgCtr ? metrics.avgCtr.toFixed(2) : '-'} prev={0} color="#22c55e" icon={<Activity size={16} color="#22c55e" />} unit="%" active={activeMetrics.has('ctr')} onClick={() => toggleMetric('ctr')} />
         <MetricCard label="Quick-Win Opportunities" value={opportunities.length} prev={0} color="#ef4444" icon={<Zap size={16} color="#ef4444" />} sublabel="Pos 4–20, ≥50 imps" />
       </div>
 
-      {/* Performance Trend */}
-      {trend.length > 0 && (
-        <div style={{ ...card }}>
-          <SectionTitle icon={<BarChart2 size={16} />} title="Performance Trend" badge={`${trend.length} days`} />
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={trend}>
-              <defs>
-                <linearGradient id="gClicks" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gImps" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.1} />
-                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={d => d.slice(5)} />
-              <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#94a3b8' }} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#94a3b8' }} />
-              <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 12 }} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Area yAxisId="left" type="monotone" dataKey="clicks" name="Clicks" stroke="#6366f1" strokeWidth={2} fill="url(#gClicks)" />
-              <Area yAxisId="right" type="monotone" dataKey="impressions" name="Impressions" stroke="#8b5cf6" strokeWidth={2} fill="url(#gImps)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      {/* Performance Trend — composite interactive chart */}
+      {trend.length > 0 && (() => {
+        // Prepare trend data: normalize ctr to %, keep position as-is
+        const chartData = trend.map((d: any) => ({
+          ...d,
+          ctrPct: d.ctr != null ? +(d.ctr * 100).toFixed(2) : undefined,
+        }))
+        const showLeft  = activeMetrics.has('clicks') || activeMetrics.has('impressions')
+        const showRight = activeMetrics.has('ctr') || activeMetrics.has('position')
+        return (
+          <div style={{ ...card }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ color: '#6366f1' }}><BarChart2 size={16} /></div>
+                <h3 style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>Performance Trend</h3>
+                <span style={{ fontSize: 11, background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>{trend.length} days</span>
+              </div>
+              <span style={{ fontSize: 11, color: '#94a3b8' }}>点击上方指标卡片切换曲线</span>
+            </div>
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="gClicks" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.18} /><stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gImps" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.12} /><stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gCtr" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.15} /><stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gPos" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.15} /><stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(d: string) => d.slice(5)} />
+                {showLeft  && <YAxis yAxisId="left"  tick={{ fontSize: 10, fill: '#94a3b8' }} />}
+                {showRight && <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#94a3b8' }}
+                  tickFormatter={(v: number) => activeMetrics.has('position') && !activeMetrics.has('ctr') ? v.toFixed(1) : v + '%'}
+                  reversed={activeMetrics.has('position') && !activeMetrics.has('ctr')} />}
+                {!showLeft && !showRight && <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#94a3b8' }} />}
+                <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 12 }}
+                  formatter={(value: any, name: string) => {
+                    if (name === 'CTR') return [value + '%', name]
+                    if (name === 'Position') return [value, name]
+                    return [Number(value).toLocaleString(), name]
+                  }} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                {activeMetrics.has('clicks') && <Area yAxisId="left" type="monotone" dataKey="clicks" name="Clicks" stroke="#6366f1" strokeWidth={2} fill="url(#gClicks)" dot={false} />}
+                {activeMetrics.has('impressions') && <Area yAxisId="left" type="monotone" dataKey="impressions" name="Impressions" stroke="#8b5cf6" strokeWidth={2} fill="url(#gImps)" dot={false} />}
+                {activeMetrics.has('ctr') && <Area yAxisId="right" type="monotone" dataKey="ctrPct" name="CTR" stroke="#22c55e" strokeWidth={2} fill="url(#gCtr)" dot={false} />}
+                {activeMetrics.has('position') && <Area yAxisId="right" type="monotone" dataKey="position" name="Position" stroke="#f59e0b" strokeWidth={2} fill="url(#gPos)" dot={false} />}
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )
+      })()}
 
       {/* CTR & Position Trend */}
       {trend.length > 0 && (

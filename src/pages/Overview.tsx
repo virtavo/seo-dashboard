@@ -106,7 +106,7 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
   const prevEnd = format(subDays(new Date(), days), 'yyyy-MM-dd')
 
   const load = useCallback(async () => {
-    if (!siteUrl || !providerToken) return
+    if (!siteUrl || !providerToken) { setLoading(false); return }
     setLoading(true)
 
     const results = await Promise.allSettled([
@@ -221,6 +221,14 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
   const deviceIcon = (d: string) => d.toLowerCase().includes('mobile') ? <Smartphone size={14} /> : d.toLowerCase().includes('tablet') ? <Tablet size={14} /> : <Monitor size={14} />
 
   const siteLabel = siteUrl ? siteUrl.replace(/https?:\/\//, '').replace(/\/$/, '') : 'Select site...'
+
+  if (!loading && !siteUrl) return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, gap: 12, color: '#64748b' }}>
+      <p style={{ fontSize: 15, fontWeight: 600 }}>未加载到 GSC 站点</p>
+      <p style={{ fontSize: 13 }}>Token 可能已过期，请刷新页面重新登录</p>
+      <button onClick={() => window.location.reload()} style={{ padding: '8px 20px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>刷新页面</button>
+    </div>
+  )
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>

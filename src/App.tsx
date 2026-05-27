@@ -75,7 +75,16 @@ export default function App() {
       const list = safeArr(data)
       setSites(list)
       if (list.length > 0) setSiteUrl(list[0].siteUrl)
-    } catch (e) { console.error(e) }
+    } catch (e: any) {
+      const msg = String(e?.message || '')
+      if (msg.includes('401') || msg.includes('expired') || msg.includes('UNAUTHENTICATED') || msg.includes('invalid_grant')) {
+        // Token invalid/expired — clear session so user sees login screen
+        sessionStorage.clear()
+        setUser(null)
+        setProviderToken('')
+      }
+      console.error('[loadSites]', e)
+    }
   }
 
   const loadGA4 = async (token: string) => {

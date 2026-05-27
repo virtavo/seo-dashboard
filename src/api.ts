@@ -83,8 +83,13 @@ export async function loadSession() {
   if (token && user) {
     // Check if token needs refresh (older than 45 min)
     const expires = parseInt(sessionStorage.getItem('seo_token_expires') || '0')
-    if (expires && Date.now() >= expires - 900000) { // refresh if < 15min left
-      refreshAccessToken() // async, non-blocking
+    // If token expired or expiry unknown, await refresh before returning
+    if (!expires || Date.now() >= expires - 900000) {
+      const refreshed = await refreshAccessToken()
+      if (refreshed) return { access_token: refreshed, user: JSON.parse(user) }
+      // Refresh failed — clear session so UI shows login screen
+      sessionStorage.clear()
+      return null
     }
     return { access_token: token, user: JSON.parse(user) }
   }

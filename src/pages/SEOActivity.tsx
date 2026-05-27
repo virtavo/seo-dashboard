@@ -1,35 +1,41 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '@/integrations/supabase/client'
+import { gscApi, getValidToken } from '@/api'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend
 } from 'recharts'
-import { TrendingUp, TrendingDown, Minus, FileText, Lightbulb, AlignLeft, Search, ChevronDown, ChevronUp } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, FileText, Lightbulb, AlignLeft, Search, ChevronDown, ChevronUp, CheckCircle, Clock, AlertCircle, RefreshCw } from 'lucide-react'
 
 const card = { background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }
 const COLORS = ['#6366f1','#22c55e','#f59e0b','#06b6d4','#ec4899','#8b5cf6','#ef4444','#14b8a6']
 
-// Derive site_domain values from the GSC siteUrl prop
 function deriveKwSite(siteUrl: string): string {
   if (!siteUrl) return ''
   const scMatch = siteUrl.match(/^sc-domain:(.+)$/)
   if (scMatch) return `https://www.${scMatch[1]}/`
   return siteUrl.endsWith('/') ? siteUrl : siteUrl + '/'
 }
-
 function deriveOptSite(siteUrl: string): string {
   if (!siteUrl) return ''
   const scMatch = siteUrl.match(/^sc-domain:(.+)$/)
   if (scMatch) return scMatch[1]
   try { return new URL(siteUrl).hostname.replace(/^www\./, '') } catch { return siteUrl }
 }
-
 function badgeLabel(siteUrl: string): string {
   if (!siteUrl) return ''
   const scMatch = siteUrl.match(/^sc-domain:(.+)$/)
   if (scMatch) return scMatch[1]
   try { return new URL(siteUrl).hostname } catch { return siteUrl }
 }
+
+const ARTICLES = [
+  { id: 1, title: 'Best Long-Range Security Camera with No Monthly Fees (2026 Guide)', slug: '/blog/long-range-security-camera-no-monthly-fee/', keyword: 'long range security camera no monthly fee', secondary: ['wifi halow security camera','1 mile range security camera','remote security camera no cell service'], product: 'MileFlask', file: 'showmo_article1_wordpress.html', status: 'ready', date: '2026-05-27' },
+  { id: 2, title: 'Window Mounted Security Camera: The Complete Guide (2026)',           slug: '/blog/window-mounted-security-camera-guide/',          keyword: 'window mounted security camera',              secondary: ['glass mounted camera','indoor security camera outdoor view','security camera through window'],                product: 'WinEye',    file: 'showmo_article2_wordpress.html', status: 'ready', date: '2026-05-27' },
+  { id: 3, title: 'Why Glass-Mounted Security Cameras Are Booming in 2026',             slug: '/blog/why-glass-mounted-security-cameras-are-growing/', keyword: 'glass mounted camera',                        secondary: ['window mounted security camera','no drill security camera','rental apartment security camera'],            product: 'WinEye',    file: 'showmo_article3_wordpress.html', status: 'ready', date: '2026-05-27' },
+  { id: 4, title: 'Best Security Camera for Renters: No Drilling, No Permission Needed (2026)', slug: '/blog/best-security-camera-for-renters/', keyword: 'security camera for renters',               secondary: ['apartment security camera no drilling','no drill security camera','window security camera apartment'], product: 'WinEye',    file: 'showmo_article4_wordpress.html', status: 'ready', date: '2026-05-27' },
+  { id: 5, title: 'Wi-Fi HaLow Security Camera: The Complete 2026 Guide (802.11ah)',    slug: '/blog/wifi-halow-security-camera-guide/',               keyword: 'wifi halow security camera',                secondary: ['802.11ah security camera','long range wifi security camera','halow camera system'],                      product: 'MileFlask', file: 'showmo_article5_wordpress.html', status: 'ready', date: '2026-05-27' },
+]
 
 interface SEOActivityProps { siteUrl?: string }
 
@@ -43,10 +49,22 @@ export default function SEOActivity({ siteUrl = '' }: SEOActivityProps) {
   const [search, setSearch] = useState('')
   const [expandedRow, setExpandedRow] = useState<string | null>(null)
 
+  // Articles tab state — MUST be at component level (not inside render/IIFE)
+  const [articleExpId, setArticleExpId] = useState<number | null>(null)
+  const [articleStats, setArticleStats] = useState<Record<string, { clicks: number; impressions: number; position: number; ctr: number }>>({})
+  const [articleStatsLoading, setArticleStatsLoading] = useState(false)
+  const [articleStatsError, setArticleStatsError] = useState<string | null>(null)
+
   const kwSite  = deriveKwSite(siteUrl)
   const optSite = deriveOptSite(siteUrl)
 
   useEffect(() => { loadData() }, [siteUrl])
+
+  useEffect(() => {
+    if (activeTab === 'articles' && siteUrl && Object.keys(articleStats).length === 0 && !articleStatsLoading) {
+      fetchArticleStats()
+    }
+  }, [activeTab, siteUrl])
 
   const loadData = async () => {
     setLoading(true)
@@ -58,21 +76,18 @@ export default function SEOActivity({ siteUrl = '' }: SEOActivityProps) {
           .eq('site_domain', kwSite)
           .eq('is_active', true)
           .order('current_position', { ascending: true, nullsFirst: false }),
-
         supabase
           .from('keyword_tracking_history')
           .select('keyword, position, impressions, clicks, recorded_at, date_range_start')
           .eq('site_domain', kwSite)
           .not('position', 'is', null)
           .order('recorded_at', { ascending: true }),
-
         supabase
           .from('blog_seo_optimizations')
           .select('id, slug, title, original_excerpt, optimized_excerpt, target_keywords, meta_description, ai_suggestions, status, created_at')
           .ilike('site_domain', `%${optSite}%`)
           .order('created_at', { ascending: false })
       ])
-
       setKeywords(kwRes.data || [])
       setHistory(histRes.data || [])
       setOptimizations(optRes.data || [])
@@ -83,7 +98,34 @@ export default function SEOActivity({ siteUrl = '' }: SEOActivityProps) {
     }
   }
 
-  // Build chart data from history
+  const fetchArticleStats = async () => {
+    if (!siteUrl) return
+    setArticleStatsLoading(true)
+    setArticleStatsError(null)
+    try {
+      const token = await getValidToken()
+      if (!token) { setArticleStatsError('Not authenticated'); return }
+      const endDate = new Date().toISOString().slice(0, 10)
+      const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+      const rows = await gscApi.topPages(token, { siteUrl, startDate, endDate, rowLimit: 500 })
+      const stats: Record<string, any> = {}
+      rows.forEach((row: any) => {
+        try {
+          const path = new URL(row.page).pathname
+          stats[path] = { clicks: row.clicks, impressions: row.impressions, position: row.position, ctr: row.ctr }
+        } catch {
+          stats[row.page] = { clicks: row.clicks, impressions: row.impressions, position: row.position, ctr: row.ctr }
+        }
+      })
+      setArticleStats(stats)
+    } catch (e: any) {
+      console.error('Article stats fetch failed:', e)
+      setArticleStatsError(e?.message || 'Failed to load GSC data')
+    } finally {
+      setArticleStatsLoading(false)
+    }
+  }
+
   const buildChartData = () => {
     const kwsToShow = selectedKws.length > 0 ? selectedKws : keywords.filter(k => k.current_position).slice(0, 5).map((k: any) => k.keyword)
     const dateMap: Record<string, Record<string, number>> = {}
@@ -102,26 +144,20 @@ export default function SEOActivity({ siteUrl = '' }: SEOActivityProps) {
   const chartData = buildChartData()
   const kwsWithPos = keywords.filter(k => k.current_position)
   const kwsToShow = selectedKws.length > 0 ? selectedKws : kwsWithPos.slice(0, 5).map((k: any) => k.keyword)
-
-  const filteredKws = keywords.filter(k =>
-    k.keyword.toLowerCase().includes(search.toLowerCase())
-  )
-
+  const filteredKws = keywords.filter(k => k.keyword.toLowerCase().includes(search.toLowerCase()))
   const toggleKw = (kw: string) =>
     setSelectedKws(prev => prev.includes(kw) ? prev.filter(k => k !== kw) : [...prev, kw].slice(0, 8))
-
   const improved = keywords.filter(k => k.position_change != null && k.position_change > 0).length
   const declined = keywords.filter(k => k.position_change != null && k.position_change < 0).length
+  const pColor: Record<string, string> = { MileFlask: '#6366f1', WinEye: '#06b6d4' }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* Site badge */}
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 20, padding: '4px 12px', alignSelf: 'flex-start' }}>
         <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />
         <span style={{ fontSize: 12, fontWeight: 600, color: '#16a34a' }}>{badgeLabel(siteUrl)}</span>
       </div>
 
-      {/* Tab switch */}
       <div style={{ display: 'flex', gap: 6 }}>
         {[['trends', '📈 Keyword Trends'], ['log', '📋 SEO Optimization Log'], ['articles', '📝 Blog Articles']].map(([v, l]) => (
           <button key={v} onClick={() => setActiveTab(v as any)}
@@ -150,8 +186,6 @@ export default function SEOActivity({ siteUrl = '' }: SEOActivityProps) {
               </div>
             ))}
           </div>
-
-          {/* Trend chart */}
           <div style={{ ...card, padding: '20px 22px' }}>
             <h3 style={{ fontWeight: 700, fontSize: 15, color: '#1e293b', marginBottom: 4 }}>Position History</h3>
             <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 14 }}>Lower = better. Click keywords in table below to add to chart (max 8).</p>
@@ -178,8 +212,6 @@ export default function SEOActivity({ siteUrl = '' }: SEOActivityProps) {
               </ResponsiveContainer>
             )}
           </div>
-
-          {/* Keyword table */}
           <div style={{ ...card, overflow: 'hidden' }}>
             <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: 10, alignItems: 'center', background: '#fafafa' }}>
               <h3 style={{ fontWeight: 700, fontSize: 14, color: '#1e293b', flex: 1 }}>Current vs Previous Position</h3>
@@ -264,7 +296,6 @@ export default function SEOActivity({ siteUrl = '' }: SEOActivityProps) {
               </div>
             ))}
           </div>
-
           <div style={{ ...card, overflow: 'hidden' }}>
             <div style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', background: '#fafafa' }}>
               <h3 style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>Blog SEO Optimizations</h3>
@@ -348,92 +379,153 @@ export default function SEOActivity({ siteUrl = '' }: SEOActivityProps) {
           </div>
         </>
       )}
+
       {/* ── BLOG ARTICLES TAB ── */}
-      {activeTab === 'articles' && (() => {
-        const ARTICLES = [
-          { id: 1, title: "Best Long-Range Security Camera with No Monthly Fees (2026 Guide)", slug: "/blog/long-range-security-camera-no-monthly-fee/", keyword: "long range security camera no monthly fee", secondary: ["wifi halow security camera","1 mile range security camera","remote security camera no cell service"], product: "MileFlask", file: "showmo_article1_wordpress.html", status: "ready", date: "2026-05-27" },
-          { id: 2, title: "Window Mounted Security Camera: The Complete Guide (2026)", slug: "/blog/window-mounted-security-camera-guide/", keyword: "window mounted security camera", secondary: ["glass mounted camera","indoor security camera outdoor view","security camera through window"], product: "WinEye", file: "showmo_article2_wordpress.html", status: "ready", date: "2026-05-27" },
-          { id: 3, title: "Why Glass-Mounted Security Cameras Are Booming in 2026", slug: "/blog/why-glass-mounted-security-cameras-are-growing/", keyword: "glass mounted camera", secondary: ["window mounted security camera","no drill security camera","rental apartment security camera"], product: "WinEye", file: "showmo_article3_wordpress.html", status: "ready", date: "2026-05-27" },
-          { id: 4, title: "Best Security Camera for Renters: No Drilling, No Permission Needed (2026)", slug: "/blog/best-security-camera-for-renters/", keyword: "security camera for renters", secondary: ["apartment security camera no drilling","no drill security camera","window security camera apartment"], product: "WinEye", file: "showmo_article4_wordpress.html", status: "ready", date: "2026-05-27" },
-          { id: 5, title: "Wi-Fi HaLow Security Camera: The Complete 2026 Guide (802.11ah)", slug: "/blog/wifi-halow-security-camera-guide/", keyword: "wifi halow security camera", secondary: ["802.11ah security camera","long range wifi security camera","halow camera system"], product: "MileFlask", file: "showmo_article5_wordpress.html", status: "ready", date: "2026-05-27" },
-        ]
-        const [expId, setExpId] = React.useState<number|null>(null)
-        const mileCount = ARTICLES.filter(a => a.product === 'MileFlask').length
-        const winCount  = ARTICLES.filter(a => a.product === 'WinEye').length
-        const pColor: Record<string, string> = { MileFlask: '#6366f1', WinEye: '#06b6d4' }
-        return (
-          <>
-            {/* Summary cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
-              {[
-                { label: 'Total Articles', value: ARTICLES.length,  color: '#6366f1', bg: '#ede9fe' },
-                { label: 'Ready to Publish', value: ARTICLES.filter(a=>a.status==='ready').length, color: '#16a34a', bg: '#dcfce7' },
-                { label: 'MileFlask Articles', value: mileCount, color: '#6366f1', bg: '#ede9fe' },
-                { label: 'WinEye Articles',   value: winCount,  color: '#06b6d4', bg: '#e0f2fe' },
-              ].map(s => (
-                <div key={s.label} style={{ ...card, padding: '16px 18px' }}>
-                  <p style={{ fontSize: 12, color: '#64748b', fontWeight: 500, marginBottom: 8 }}>{s.label}</p>
-                  <p style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Keyword coverage banner */}
-            <div style={{ ...card, padding: '14px 18px', background: '#f8faff', border: '1px solid #e0e7ff' }}>
-              <p style={{ fontSize: 12, fontWeight: 700, color: '#6366f1', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Target Keywords Coverage</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {ARTICLES.map(a => (
-                  <span key={a.id} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: pColor[a.product] + '18', color: pColor[a.product], border: `1px solid ${pColor[a.product]}30` }}>
-                    🎯 {a.keyword}
-                  </span>
-                ))}
+      {activeTab === 'articles' && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+            {[
+              { label: 'Total Articles',          value: ARTICLES.length,                                                                             color: '#6366f1', bg: '#ede9fe' },
+              { label: 'Ready to Publish',         value: ARTICLES.filter(a => a.status === 'ready').length,                                          color: '#16a34a', bg: '#dcfce7' },
+              { label: 'Indexed by Google',        value: ARTICLES.filter(a => (articleStats[a.slug]?.impressions ?? 0) > 0).length,                  color: '#0891b2', bg: '#e0f2fe' },
+              { label: 'Total GSC Clicks (90d)',   value: ARTICLES.reduce((sum, a) => sum + (articleStats[a.slug]?.clicks ?? 0), 0),                  color: '#d97706', bg: '#fef3c7' },
+            ].map(s => (
+              <div key={s.label} style={{ ...card, padding: '16px 18px' }}>
+                <p style={{ fontSize: 12, color: '#64748b', fontWeight: 500, marginBottom: 8 }}>{s.label}</p>
+                <p style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</p>
               </div>
-            </div>
+            ))}
+          </div>
 
-            {/* Articles list */}
-            <div style={{ ...card, overflow: 'hidden' }}>
-              <div style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <h3 style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>WordPress Blog Articles</h3>
-                  <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>点击行展开查看完整关键词策略 · 状态 = ready 表示已生成待上传</p>
-                </div>
+          <div style={{ ...card, padding: '14px 18px', background: '#f8faff', border: '1px solid #e0e7ff' }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#6366f1', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Target Keywords Coverage</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {ARTICLES.map(a => {
+                const kwData = keywords.find(k => k.keyword.toLowerCase() === a.keyword.toLowerCase())
+                return (
+                  <span key={a.id} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: pColor[a.product] + '18', color: pColor[a.product], border: `1px solid ${pColor[a.product]}30`, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    🎯 {a.keyword}
+                    {kwData?.current_position
+                      ? <span style={{ background: pColor[a.product], color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 800 }}>#{Math.round(kwData.current_position)}</span>
+                      : <span style={{ background: '#e2e8f0', color: '#94a3b8', borderRadius: 10, padding: '1px 6px', fontSize: 10 }}>not ranked</span>
+                    }
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+
+          <div style={{ ...card, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <h3 style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>WordPress Blog Articles</h3>
+                <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>GSC 数据来自近 90 天 · 点击行展开查看详细关键词策略与流量</p>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {articleStatsLoading && (
+                  <span style={{ fontSize: 11, color: '#6366f1', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <RefreshCw size={12} /> Loading GSC…
+                  </span>
+                )}
+                {articleStatsError && !articleStatsLoading && (
+                  <span style={{ fontSize: 11, color: '#ef4444' }}>⚠ {articleStatsError}</span>
+                )}
+                <button onClick={fetchArticleStats} disabled={articleStatsLoading}
+                  style={{ fontSize: 12, fontWeight: 600, color: '#6366f1', cursor: articleStatsLoading ? 'not-allowed' : 'pointer', padding: '5px 12px', border: '1px solid #c7d2fe', borderRadius: 8, background: '#fff', opacity: articleStatsLoading ? 0.5 : 1 }}>
+                  ↻ Refresh GSC
+                </button>
                 <a href="https://www.showmo365.com/wp-admin/" target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: 12, fontWeight: 600, color: '#6366f1', textDecoration: 'none', padding: '6px 14px', border: '1px solid #c7d2fe', borderRadius: 8, background: '#fff' }}>
+                  style={{ fontSize: 12, fontWeight: 600, color: '#6366f1', textDecoration: 'none', padding: '5px 12px', border: '1px solid #c7d2fe', borderRadius: 8, background: '#fff' }}>
                   → WP Admin
                 </a>
               </div>
-              {ARTICLES.map((a, i) => (
-                <div key={a.id} style={{ borderBottom: i < ARTICLES.length-1 ? '1px solid #f8fafc' : 'none' }}>
-                  <div onClick={() => setExpId(expId === a.id ? null : a.id)}
+            </div>
+
+            {ARTICLES.map((a, i) => {
+              const gsc = articleStats[a.slug]
+              const kwData = keywords.find(k => k.keyword.toLowerCase() === a.keyword.toLowerCase())
+              const statsLoaded = Object.keys(articleStats).length > 0
+              const indexed = statsLoaded ? (gsc && gsc.impressions > 0 ? 'yes' : 'no') : 'unknown'
+
+              return (
+                <div key={a.id} style={{ borderBottom: i < ARTICLES.length - 1 ? '1px solid #f8fafc' : 'none' }}>
+                  <div onClick={() => setArticleExpId(articleExpId === a.id ? null : a.id)}
                     style={{ padding: '13px 18px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 12 }}
                     onMouseEnter={e => (e.currentTarget.style.background = '#fafafe')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                    {/* Article number */}
                     <div style={{ width: 28, height: 28, borderRadius: 8, background: pColor[a.product] + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 700, color: pColor[a.product] }}>
                       {a.id}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      {/* Title + badges */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 5 }}>
                         <span style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>{a.title}</span>
                         <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: pColor[a.product] + '18', color: pColor[a.product] }}>{a.product}</span>
+                        {indexed === 'yes'
+                          ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: '#dcfce7', color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: 3 }}><CheckCircle size={10} /> Indexed</span>
+                          : indexed === 'no'
+                          ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: '#fef9c3', color: '#ca8a04', display: 'inline-flex', alignItems: 'center', gap: 3 }}><Clock size={10} /> Not indexed yet</span>
+                          : <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: '#f1f5f9', color: '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: 3 }}><AlertCircle size={10} /> Pending check</span>
+                        }
                         <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: '#dcfce7', color: '#16a34a' }}>✓ {a.status}</span>
                       </div>
-                      {/* Focus keyword */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Focus:</span>
-                        <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: '#ede9fe', color: '#6366f1' }}>{a.keyword}</span>
-                        <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 6 }}>Slug: {a.slug}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Focus:</span>
+                          <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: '#ede9fe', color: '#6366f1' }}>{a.keyword}</span>
+                          {kwData?.current_position && (
+                            <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: '#dbeafe', color: '#2563eb' }}>
+                              Rank #{Math.round(kwData.current_position)}
+                            </span>
+                          )}
+                        </div>
+                        {gsc && (
+                          <div style={{ display: 'flex', gap: 10, fontSize: 11, color: '#64748b' }}>
+                            <span>👆 <strong style={{ color: '#374151' }}>{gsc.clicks}</strong> clicks</span>
+                            <span>👁 <strong style={{ color: '#374151' }}>{gsc.impressions.toLocaleString()}</strong> impr</span>
+                            {gsc.position > 0 && <span>📍 pos <strong style={{ color: '#374151' }}>#{gsc.position.toFixed(1)}</strong></span>}
+                          </div>
+                        )}
+                        {!gsc && statsLoaded && (
+                          <span style={{ fontSize: 11, color: '#94a3b8' }}>No GSC data — not live yet</span>
+                        )}
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                       <span style={{ fontSize: 11, color: '#94a3b8' }}>{a.date}</span>
-                      {expId === a.id ? <ChevronUp size={14} color="#94a3b8" /> : <ChevronDown size={14} color="#94a3b8" />}
+                      {articleExpId === a.id ? <ChevronUp size={14} color="#94a3b8" /> : <ChevronDown size={14} color="#94a3b8" />}
                     </div>
                   </div>
-                  {expId === a.id && (
-                    <div style={{ padding: '0 18px 16px 58px', background: '#fafafa', borderTop: '1px solid #f1f5f9' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 12 }}>
+
+                  {articleExpId === a.id && (
+                    <div style={{ padding: '0 18px 20px 58px', background: '#fafafa', borderTop: '1px solid #f1f5f9' }}>
+                      {gsc && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginTop: 14, marginBottom: 14 }}>
+                          {[
+                            { label: 'Clicks (90d)',      value: gsc.clicks.toLocaleString(),                              color: '#6366f1' },
+                            { label: 'Impressions (90d)', value: gsc.impressions.toLocaleString(),                          color: '#0891b2' },
+                            { label: 'Avg Position',      value: gsc.position > 0 ? `#${gsc.position.toFixed(1)}` : '—',   color: '#d97706' },
+                            { label: 'CTR',               value: gsc.ctr > 0 ? `${(gsc.ctr * 100).toFixed(2)}%` : '—',    color: '#16a34a' },
+                          ].map(s => (
+                            <div key={s.label} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '12px 14px' }}>
+                              <p style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>{s.label}</p>
+                              <p style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {kwData && (
+                        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
+                          <p style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Keyword Tracking (Supabase)</p>
+                          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: '#374151' }}>
+                            <span>Position: <strong>{kwData.current_position ? `#${Math.round(kwData.current_position)}` : 'Not ranked'}</strong></span>
+                            <span>Prev: <strong>{kwData.previous_position ? `#${Math.round(kwData.previous_position)}` : '—'}</strong></span>
+                            <span>Clicks: <strong>{kwData.clicks ?? '—'}</strong></span>
+                            <span>Impressions: <strong>{kwData.impressions ?? '—'}</strong></span>
+                            <span>Last synced: <strong>{kwData.last_checked?.slice(0, 10) ?? '—'}</strong></span>
+                          </div>
+                        </div>
+                      )}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 4 }}>
                         <div>
                           <p style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Secondary Keywords</p>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -443,22 +535,23 @@ export default function SEOActivity({ siteUrl = '' }: SEOActivityProps) {
                           </div>
                         </div>
                         <div>
-                          <p style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Upload Reference File</p>
+                          <p style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Upload Reference</p>
                           <code style={{ fontSize: 11, background: '#f1f5f9', padding: '3px 8px', borderRadius: 5, color: '#374151' }}>{a.file}</code>
-                          <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
-                            WordPress → Code Editor → Paste HTML → Add Schema block at bottom
-                          </p>
+                          <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>WordPress → Code Editor → Paste HTML → Add Schema block</p>
+                          <a href={`https://www.showmo365.com${a.slug}`} target="_blank" rel="noopener noreferrer"
+                            style={{ display: 'inline-block', marginTop: 6, fontSize: 11, color: '#6366f1', textDecoration: 'none' }}>
+                            🔗 {`https://www.showmo365.com${a.slug}`}
+                          </a>
                         </div>
                       </div>
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
-          </>
-        )
-      })()}
-
+              )
+            })}
+          </div>
+        </>
+      )}
     </div>
   )
 }

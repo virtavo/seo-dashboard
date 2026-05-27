@@ -29,13 +29,34 @@ function badgeLabel(siteUrl: string): string {
   try { return new URL(siteUrl).hostname } catch { return siteUrl }
 }
 
-const ARTICLES = [
-  { id: 1, title: 'Best Long-Range Security Camera with No Monthly Fees (2026 Guide)', slug: '/blog/long-range-security-camera-no-monthly-fee/', keyword: 'long range security camera no monthly fee', secondary: ['wifi halow security camera','1 mile range security camera','remote security camera no cell service'], product: 'MileFlask', file: 'showmo_article1_wordpress.html', status: 'ready', date: '2026-05-27' },
-  { id: 2, title: 'Window Mounted Security Camera: The Complete Guide (2026)',           slug: '/blog/window-mounted-security-camera-guide/',          keyword: 'window mounted security camera',              secondary: ['glass mounted camera','indoor security camera outdoor view','security camera through window'],                product: 'WinEye',    file: 'showmo_article2_wordpress.html', status: 'ready', date: '2026-05-27' },
-  { id: 3, title: 'Why Glass-Mounted Security Cameras Are Booming in 2026',             slug: '/blog/why-glass-mounted-security-cameras-are-growing/', keyword: 'glass mounted camera',                        secondary: ['window mounted security camera','no drill security camera','rental apartment security camera'],            product: 'WinEye',    file: 'showmo_article3_wordpress.html', status: 'ready', date: '2026-05-27' },
-  { id: 4, title: 'Best Security Camera for Renters: No Drilling, No Permission Needed (2026)', slug: '/blog/best-security-camera-for-renters/', keyword: 'security camera for renters',               secondary: ['apartment security camera no drilling','no drill security camera','window security camera apartment'], product: 'WinEye',    file: 'showmo_article4_wordpress.html', status: 'ready', date: '2026-05-27' },
-  { id: 5, title: 'Wi-Fi HaLow Security Camera: The Complete 2026 Guide (802.11ah)',    slug: '/blog/wifi-halow-security-camera-guide/',               keyword: 'wifi halow security camera',                secondary: ['802.11ah security camera','long range wifi security camera','halow camera system'],                      product: 'MileFlask', file: 'showmo_article5_wordpress.html', status: 'ready', date: '2026-05-27' },
-]
+// ── Articles registry: keyed by site domain ──────────────────────
+// Add new sites/articles here without touching component logic
+const ARTICLES_REGISTRY: Record<string, Array<{
+  id: number; title: string; slug: string; keyword: string;
+  secondary: string[]; product: string; file: string; status: string; date: string;
+}>> = {
+  // ── showmo365.com ──────────────────────────────────────────────
+  'showmo365.com': [
+    { id: 1, title: 'Best Long-Range Security Camera with No Monthly Fees (2026 Guide)', slug: '/blog/long-range-security-camera-no-monthly-fee/', keyword: 'long range security camera no monthly fee', secondary: ['wifi halow security camera','1 mile range security camera','remote security camera no cell service'], product: 'MileFlask', file: 'showmo_article1_wordpress.html', status: 'ready', date: '2026-05-27' },
+    { id: 2, title: 'Window Mounted Security Camera: The Complete Guide (2026)',           slug: '/blog/window-mounted-security-camera-guide/',          keyword: 'window mounted security camera',              secondary: ['glass mounted camera','indoor security camera outdoor view','security camera through window'],                product: 'WinEye',    file: 'showmo_article2_wordpress.html', status: 'ready', date: '2026-05-27' },
+    { id: 3, title: 'Why Glass-Mounted Security Cameras Are Booming in 2026',             slug: '/blog/why-glass-mounted-security-cameras-are-growing/', keyword: 'glass mounted camera',                        secondary: ['window mounted security camera','no drill security camera','rental apartment security camera'],            product: 'WinEye',    file: 'showmo_article3_wordpress.html', status: 'ready', date: '2026-05-27' },
+    { id: 4, title: 'Best Security Camera for Renters: No Drilling, No Permission Needed (2026)', slug: '/blog/best-security-camera-for-renters/', keyword: 'security camera for renters',               secondary: ['apartment security camera no drilling','no drill security camera','window security camera apartment'], product: 'WinEye',    file: 'showmo_article4_wordpress.html', status: 'ready', date: '2026-05-27' },
+    { id: 5, title: 'Wi-Fi HaLow Security Camera: The Complete 2026 Guide (802.11ah)',    slug: '/blog/wifi-halow-security-camera-guide/',               keyword: 'wifi halow security camera',                secondary: ['802.11ah security camera','long range wifi security camera','halow camera system'],                      product: 'MileFlask', file: 'showmo_article5_wordpress.html', status: 'ready', date: '2026-05-27' },
+  ],
+  // ── virtavo.com ────────────────────────────────────────────────
+  'virtavo.com': [
+    // Articles will be added here as they are written
+    // Example format:
+    // { id: 1, title: '...', slug: '/blog/.../', keyword: '...', secondary: ['...'], product: 'EggSentry', file: 'virtavo_article1_wordpress.html', status: 'ready', date: '2026-05-27' },
+  ],
+}
+
+function deriveSiteDomain(siteUrl: string): string {
+  if (!siteUrl) return ''
+  const scMatch = siteUrl.match(/^sc-domain:(.+)$/)
+  if (scMatch) return scMatch[1].replace(/^www\./, '')
+  try { return new URL(siteUrl).hostname.replace(/^www\./, '') } catch { return siteUrl }
+}
 
 interface SEOActivityProps { siteUrl?: string }
 
@@ -149,7 +170,14 @@ export default function SEOActivity({ siteUrl = '' }: SEOActivityProps) {
     setSelectedKws(prev => prev.includes(kw) ? prev.filter(k => k !== kw) : [...prev, kw].slice(0, 8))
   const improved = keywords.filter(k => k.position_change != null && k.position_change > 0).length
   const declined = keywords.filter(k => k.position_change != null && k.position_change < 0).length
-  const pColor: Record<string, string> = { MileFlask: '#6366f1', WinEye: '#06b6d4' }
+  const pColor: Record<string, string> = { MileFlask: '#6366f1', WinEye: '#06b6d4', EggSentry: '#f59e0b', XD1: '#8b5cf6' }
+
+  // Derive articles for the current site
+  const siteDomain = deriveSiteDomain(siteUrl)
+  const ARTICLES = ARTICLES_REGISTRY[siteDomain] ?? []
+  const wpAdminUrl = siteUrl
+    ? `https://${siteDomain}/wp-admin/`
+    : 'https://www.showmo365.com/wp-admin/'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -434,14 +462,20 @@ export default function SEOActivity({ siteUrl = '' }: SEOActivityProps) {
                   style={{ fontSize: 12, fontWeight: 600, color: '#6366f1', cursor: articleStatsLoading ? 'not-allowed' : 'pointer', padding: '5px 12px', border: '1px solid #c7d2fe', borderRadius: 8, background: '#fff', opacity: articleStatsLoading ? 0.5 : 1 }}>
                   ↻ Refresh GSC
                 </button>
-                <a href="https://www.showmo365.com/wp-admin/" target="_blank" rel="noopener noreferrer"
+                <a href={wpAdminUrl} target="_blank" rel="noopener noreferrer"
                   style={{ fontSize: 12, fontWeight: 600, color: '#6366f1', textDecoration: 'none', padding: '5px 12px', border: '1px solid #c7d2fe', borderRadius: 8, background: '#fff' }}>
                   → WP Admin
                 </a>
               </div>
             </div>
 
-            {ARTICLES.map((a, i) => {
+            {ARTICLES.length === 0 ? (
+              <div style={{ padding: '40px 24px', textAlign: 'center', color: '#94a3b8' }}>
+                <p style={{ fontSize: 24, marginBottom: 8 }}>📭</p>
+                <p style={{ fontSize: 14, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>No articles for {siteDomain} yet</p>
+                <p style={{ fontSize: 12 }}>Add articles to <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>ARTICLES_REGISTRY['{siteDomain}']</code> in SEOActivity.tsx</p>
+              </div>
+            ) : ARTICLES.map((a, i) => {
               const gsc = articleStats[a.slug]
               const kwData = keywords.find(k => k.keyword.toLowerCase() === a.keyword.toLowerCase())
               const statsLoaded = Object.keys(articleStats).length > 0
@@ -538,9 +572,9 @@ export default function SEOActivity({ siteUrl = '' }: SEOActivityProps) {
                           <p style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Upload Reference</p>
                           <code style={{ fontSize: 11, background: '#f1f5f9', padding: '3px 8px', borderRadius: 5, color: '#374151' }}>{a.file}</code>
                           <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>WordPress → Code Editor → Paste HTML → Add Schema block</p>
-                          <a href={`https://www.showmo365.com${a.slug}`} target="_blank" rel="noopener noreferrer"
+                          <a href={`https://${siteDomain}${a.slug}`} target="_blank" rel="noopener noreferrer"
                             style={{ display: 'inline-block', marginTop: 6, fontSize: 11, color: '#6366f1', textDecoration: 'none' }}>
-                            🔗 {`https://www.showmo365.com${a.slug}`}
+                            🔗 {`https://${siteDomain}${a.slug}`}
                           </a>
                         </div>
                       </div>

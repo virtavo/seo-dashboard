@@ -159,6 +159,20 @@ export const gscApi = {
       'https://searchconsole.googleapis.com/v1/urlInspection/index:inspect',
       { inspectionUrl, siteUrl }
     ),
+  // Fetch true aggregate totals (no dimension filter = matches GSC native UI)
+  aggregate: async (token: string, params: any) => {
+    const body = { startDate: params.startDate, endDate: params.endDate }
+    const d = await gscFetch(token,
+      `${GSC}/sites/${encodeURIComponent(params.siteUrl)}/searchAnalytics/query`, body)
+    // Returns {rows:[{clicks,impressions,ctr,position}]} or {clicks,...} at top level
+    const row = d.rows?.[0] ?? d
+    return {
+      clicks: row.clicks || d.clicks || 0,
+      impressions: row.impressions || d.impressions || 0,
+      ctr: row.ctr || d.ctr || 0,
+      position: row.position || d.position || 0,
+    }
+  },
   callAction: async (action: string, params: any, token: string) => {
     // Generic fallback for any remaining callAction uses
     if (action === 'sites') return gscApi.sites(token)

@@ -118,19 +118,23 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
       gscApi.callAction('by-device', { siteUrl, startDate, endDate }, providerToken),          // [5] device
       gscApi.sitemaps(providerToken, { siteUrl }),                                             // [6] sitemaps
       gscApi.opportunities(providerToken, { siteUrl, startDate, endDate }),                   // [7] opportunities
+      gscApi.aggregate(providerToken, { siteUrl, startDate, endDate }),                       // [8] true aggregate totals
+      gscApi.aggregate(providerToken, { siteUrl, startDate: prevStart, endDate: prevEnd }),   // [9] prev aggregate totals
     ])
 
     const get = (i: number) => results[i].status === 'fulfilled' ? results[i].value : null
 
-    // Current metrics
+    // Current metrics — use aggregate (no-dimension) for accurate totals matching GSC native UI
     const kws = safeArr(get(0))
-    const prevKws = safeArr(get(1))
-    const totalClicks = kws.reduce((s: number, k: any) => s + (k.clicks || 0), 0)
-    const totalImps = kws.reduce((s: number, k: any) => s + (k.impressions || 0), 0)
-    const avgPos = kws.length ? kws.reduce((s: number, k: any) => s + k.position, 0) / kws.length : 0
-    const avgCtr = kws.length ? kws.reduce((s: number, k: any) => s + k.ctr, 0) / kws.length * 100 : 0
-    const prevClicks = prevKws.reduce((s: number, k: any) => s + (k.clicks || 0), 0)
-    const prevImps = prevKws.reduce((s: number, k: any) => s + (k.impressions || 0), 0)
+    const agg     = get(8) as any  // true aggregate totals (current period)
+    const aggPrev = get(9) as any  // true aggregate totals (prev period)
+    const totalClicks = agg?.clicks     ?? kws.reduce((s: number, k: any) => s + (k.clicks || 0), 0)
+    const totalImps   = agg?.impressions ?? kws.reduce((s: number, k: any) => s + (k.impressions || 0), 0)
+    const avgPos      = agg?.position   ?? (kws.length ? kws.reduce((s: number, k: any) => s + k.position, 0) / kws.length : 0)
+    const avgCtr      = agg?.ctr        != null ? agg.ctr * 100
+                        : (kws.length ? kws.reduce((s: number, k: any) => s + k.ctr, 0) / kws.length * 100 : 0)
+    const prevClicks  = aggPrev?.clicks      ?? 0
+    const prevImps    = aggPrev?.impressions ?? 0
 
     setMetrics({ totalClicks, totalImps, avgPos, avgCtr, kwCount: kws.length, prevClicks, prevImps })
     setTopKeywords(kws.slice(0, 50))

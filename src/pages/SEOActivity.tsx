@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -34,7 +34,7 @@ function badgeLabel(siteUrl: string): string {
 interface SEOActivityProps { siteUrl?: string }
 
 export default function SEOActivity({ siteUrl = '' }: SEOActivityProps) {
-  const [activeTab, setActiveTab] = useState<'trends' | 'log'>('trends')
+  const [activeTab, setActiveTab] = useState<'trends' | 'log' | 'articles'>('trends')
   const [keywords, setKeywords] = useState<any[]>([])
   const [history, setHistory] = useState<any[]>([])
   const [optimizations, setOptimizations] = useState<any[]>([])
@@ -123,7 +123,7 @@ export default function SEOActivity({ siteUrl = '' }: SEOActivityProps) {
 
       {/* Tab switch */}
       <div style={{ display: 'flex', gap: 6 }}>
-        {[['trends', '📈 Keyword Trends'], ['log', '📋 SEO Optimization Log']].map(([v, l]) => (
+        {[['trends', '📈 Keyword Trends'], ['log', '📋 SEO Optimization Log'], ['articles', '📝 Blog Articles']].map(([v, l]) => (
           <button key={v} onClick={() => setActiveTab(v as any)}
             style={{ padding: '7px 18px', borderRadius: 20, border: '1px solid', fontSize: 13, fontWeight: 600, cursor: 'pointer',
               borderColor: activeTab === v ? '#6366f1' : '#e2e8f0',
@@ -348,6 +348,117 @@ export default function SEOActivity({ siteUrl = '' }: SEOActivityProps) {
           </div>
         </>
       )}
+      {/* ── BLOG ARTICLES TAB ── */}
+      {activeTab === 'articles' && (() => {
+        const ARTICLES = [
+          { id: 1, title: "Best Long-Range Security Camera with No Monthly Fees (2026 Guide)", slug: "/blog/long-range-security-camera-no-monthly-fee/", keyword: "long range security camera no monthly fee", secondary: ["wifi halow security camera","1 mile range security camera","remote security camera no cell service"], product: "MileFlask", file: "showmo_article1_wordpress.html", status: "ready", date: "2026-05-27" },
+          { id: 2, title: "Window Mounted Security Camera: The Complete Guide (2026)", slug: "/blog/window-mounted-security-camera-guide/", keyword: "window mounted security camera", secondary: ["glass mounted camera","indoor security camera outdoor view","security camera through window"], product: "WinEye", file: "showmo_article2_wordpress.html", status: "ready", date: "2026-05-27" },
+          { id: 3, title: "Why Glass-Mounted Security Cameras Are Booming in 2026", slug: "/blog/why-glass-mounted-security-cameras-are-growing/", keyword: "glass mounted camera", secondary: ["window mounted security camera","no drill security camera","rental apartment security camera"], product: "WinEye", file: "showmo_article3_wordpress.html", status: "ready", date: "2026-05-27" },
+          { id: 4, title: "Best Security Camera for Renters: No Drilling, No Permission Needed (2026)", slug: "/blog/best-security-camera-for-renters/", keyword: "security camera for renters", secondary: ["apartment security camera no drilling","no drill security camera","window security camera apartment"], product: "WinEye", file: "showmo_article4_wordpress.html", status: "ready", date: "2026-05-27" },
+          { id: 5, title: "Wi-Fi HaLow Security Camera: The Complete 2026 Guide (802.11ah)", slug: "/blog/wifi-halow-security-camera-guide/", keyword: "wifi halow security camera", secondary: ["802.11ah security camera","long range wifi security camera","halow camera system"], product: "MileFlask", file: "showmo_article5_wordpress.html", status: "ready", date: "2026-05-27" },
+        ]
+        const [expId, setExpId] = React.useState<number|null>(null)
+        const mileCount = ARTICLES.filter(a => a.product === 'MileFlask').length
+        const winCount  = ARTICLES.filter(a => a.product === 'WinEye').length
+        const pColor: Record<string, string> = { MileFlask: '#6366f1', WinEye: '#06b6d4' }
+        return (
+          <>
+            {/* Summary cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+              {[
+                { label: 'Total Articles', value: ARTICLES.length,  color: '#6366f1', bg: '#ede9fe' },
+                { label: 'Ready to Publish', value: ARTICLES.filter(a=>a.status==='ready').length, color: '#16a34a', bg: '#dcfce7' },
+                { label: 'MileFlask Articles', value: mileCount, color: '#6366f1', bg: '#ede9fe' },
+                { label: 'WinEye Articles',   value: winCount,  color: '#06b6d4', bg: '#e0f2fe' },
+              ].map(s => (
+                <div key={s.label} style={{ ...card, padding: '16px 18px' }}>
+                  <p style={{ fontSize: 12, color: '#64748b', fontWeight: 500, marginBottom: 8 }}>{s.label}</p>
+                  <p style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Keyword coverage banner */}
+            <div style={{ ...card, padding: '14px 18px', background: '#f8faff', border: '1px solid #e0e7ff' }}>
+              <p style={{ fontSize: 12, fontWeight: 700, color: '#6366f1', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Target Keywords Coverage</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {ARTICLES.map(a => (
+                  <span key={a.id} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: pColor[a.product] + '18', color: pColor[a.product], border: `1px solid ${pColor[a.product]}30` }}>
+                    🎯 {a.keyword}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Articles list */}
+            <div style={{ ...card, overflow: 'hidden' }}>
+              <div style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <h3 style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>WordPress Blog Articles</h3>
+                  <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>点击行展开查看完整关键词策略 · 状态 = ready 表示已生成待上传</p>
+                </div>
+                <a href="https://www.showmo365.com/wp-admin/" target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize: 12, fontWeight: 600, color: '#6366f1', textDecoration: 'none', padding: '6px 14px', border: '1px solid #c7d2fe', borderRadius: 8, background: '#fff' }}>
+                  → WP Admin
+                </a>
+              </div>
+              {ARTICLES.map((a, i) => (
+                <div key={a.id} style={{ borderBottom: i < ARTICLES.length-1 ? '1px solid #f8fafc' : 'none' }}>
+                  <div onClick={() => setExpId(expId === a.id ? null : a.id)}
+                    style={{ padding: '13px 18px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 12 }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#fafafe')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                    {/* Article number */}
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: pColor[a.product] + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 700, color: pColor[a.product] }}>
+                      {a.id}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {/* Title + badges */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 5 }}>
+                        <span style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>{a.title}</span>
+                        <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: pColor[a.product] + '18', color: pColor[a.product] }}>{a.product}</span>
+                        <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: '#dcfce7', color: '#16a34a' }}>✓ {a.status}</span>
+                      </div>
+                      {/* Focus keyword */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Focus:</span>
+                        <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: '#ede9fe', color: '#6366f1' }}>{a.keyword}</span>
+                        <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 6 }}>Slug: {a.slug}</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <span style={{ fontSize: 11, color: '#94a3b8' }}>{a.date}</span>
+                      {expId === a.id ? <ChevronUp size={14} color="#94a3b8" /> : <ChevronDown size={14} color="#94a3b8" />}
+                    </div>
+                  </div>
+                  {expId === a.id && (
+                    <div style={{ padding: '0 18px 16px 58px', background: '#fafafa', borderTop: '1px solid #f1f5f9' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 12 }}>
+                        <div>
+                          <p style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Secondary Keywords</p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {a.secondary.map(kw => (
+                              <span key={kw} style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#fef3c7', color: '#d97706' }}>{kw}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <p style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Upload Reference File</p>
+                          <code style={{ fontSize: 11, background: '#f1f5f9', padding: '3px 8px', borderRadius: 5, color: '#374151' }}>{a.file}</code>
+                          <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
+                            WordPress → Code Editor → Paste HTML → Add Schema block at bottom
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )
+      })()}
+
     </div>
   )
 }

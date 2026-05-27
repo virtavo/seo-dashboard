@@ -44,7 +44,17 @@ export default function App() {
   const [user, setUser] = useState<any>(null)
   const [providerToken, setProviderToken] = useState('')
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('overview')
+  const [tab, setTab] = useState(() => {
+    const hash = window.location.hash.replace('#', '')
+    const validIds = ['overview','analytics','rankings','opportunities','seo-activity','cwv','coverage','page-perf','keyword-gap','serp','competitors','backlinks','trends']
+    return validIds.includes(hash) ? hash : 'overview'
+  })
+
+  // Keep URL hash in sync with active tab
+  const handleTabChange = (newTab: string) => {
+    setTab(newTab)
+    window.location.hash = newTab
+  }
   const [sites, setSites] = useState<any[]>([])
   const [siteUrl, setSiteUrl] = useState('')
   const [ga4Properties, setGa4Properties] = useState<any[]>([])
@@ -214,7 +224,7 @@ export default function App() {
             const Icon = n.icon!
             const active = tab === n.id
             return (
-              <button key={n.id} onClick={() => setTab(n.id)}
+              <button key={n.id} onClick={() => handleTabChange(n.id)}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 11px', borderRadius: 8, border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left', fontWeight: active ? 600 : 400, fontSize: 13, background: active ? 'linear-gradient(135deg, #ede9fe, #e0e7ff)' : 'transparent', color: active ? '#6366f1' : '#64748b', transition: 'all 0.15s' }}>
                 <Icon size={15} style={{ flexShrink: 0 }} />{n.label}
               </button>

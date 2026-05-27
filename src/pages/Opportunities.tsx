@@ -98,7 +98,7 @@ export default function Opportunities({ siteUrl, providerToken }: Props) {
               <tbody>
                 {filtered.map((row, i) => (
                   <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
-                    <td style={{ padding: '10px 16px', fontWeight: 600, color: '#374151' }}>{row.keys[0]}</td>
+                    <td style={{ padding: '10px 16px', fontWeight: 600, color: '#374151' }}>{row.keyword ?? row.keys?.[0] ?? row.query ?? '—'}</td>
                     <td style={{ padding: '10px 16px' }}>
                       <span style={{ padding: '3px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: row.position <= 10 ? '#dbeafe' : '#fefce8', color: row.position <= 10 ? '#2563eb' : '#ca8a04' }}>
                         #{row.position.toFixed(0)}

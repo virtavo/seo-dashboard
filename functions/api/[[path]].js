@@ -63,6 +63,11 @@ export async function onRequest(context) {
 
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
+  // Health check / probe endpoint
+  if (p === '/api/session/test' || p === '/api/health') {
+    return json({ ok: true, ts: Date.now(), env: url.hostname })
+  }
+
   // OAuth init
   if (p === '/api/oauth/init') {
     const redirectTo = url.searchParams.get('redirect_to') || `${SERVER_URL}/`

@@ -1,7 +1,8 @@
 name: Build and Deploy SEO Dashboard
+# DISABLED: App is deployed via Cloudflare Pages (deploy-pages.yml).
+# This workflow deploys to internal server 192.168.10.42 which is not reachable from CI.
+# Kept for reference only — trigger manually if needed.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 jobs:
   build-and-deploy:

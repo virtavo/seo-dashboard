@@ -1,7 +1,8 @@
 name: Deploy Worker
+# DISABLED auto-trigger: Worker (seo-dashboard-api.homevirtavo.workers.dev) is superseded
+# by Cloudflare Pages Functions (functions/api/[[path]].js) which handle all /api/* routes.
+# Keep for manual re-deploy only if the standalone Worker is ever needed again.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 jobs:
   deploy:

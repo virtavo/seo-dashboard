@@ -65,6 +65,7 @@ export default function App() {
   const [passwordInput, setPasswordInput] = useState('')
   const [loginError, setLoginError] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
+  const [sitesError, setSitesError] = useState('')
 
   useEffect(() => {
     loadSession().then(session => {
@@ -79,19 +80,34 @@ export default function App() {
     })
   }, [])
 
-  const loadSites = async (token: string) => {
+  const loadSites = async (token: string, isRetry = false) => {
+    setSitesError('')
     try {
-      const data = await gscApi.sites(token)
+      // Always get freshest token before calling GSC
+      const freshToken = await getValidToken() || token
+      const data = await gscApi.sites(freshToken)
       const list = safeArr(data)
       setSites(list)
       if (list.length > 0) setSiteUrl(list[0].siteUrl)
     } catch (e: any) {
       const msg = String(e?.message || '')
-      if (msg.includes('401') || msg.includes('expired') || msg.includes('UNAUTHENTICATED') || msg.includes('invalid_grant')) {
-        // Token invalid/expired — clear session so user sees login screen
-        sessionStorage.clear()
-        setUser(null)
-        setProviderToken('')
+      const isAuthErr = msg.includes('401') || msg.includes('expired') ||
+        msg.includes('UNAUTHENTICATED') || msg.includes('invalid_grant')
+      if (isAuthErr && !isRetry) {
+        // Force clear the expiry so getValidToken triggers a real refresh
+        console.log('[loadSites] Token error, forcing refresh...')
+        sessionStorage.removeItem('seo_token_expires')
+        const newToken = await getValidToken()
+        if (newToken && newToken !== sessionStorage.getItem('seo_token')) {
+          setProviderToken(newToken)
+          return loadSites(newToken, true)
+        }
+        // Refresh also failed — show re-login banner
+        setSitesError('token_expired')
+      } else if (isAuthErr && isRetry) {
+        setSitesError('token_expired')
+      } else {
+        setSitesError('api_error')
       }
       console.error('[loadSites]', e)
     }
@@ -299,7 +315,17 @@ export default function App() {
             }}
           />
         )}
-        {tab !== 'overview' && tab !== 'analytics' && !siteUrl ? (
+        {sitesError === 'token_expired' ? (
+          <div style={{ background: '#fff', border: '1px solid #fca5a5', borderRadius: 16, padding: 48, textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🔑</div>
+            <p style={{ color: '#dc2626', fontWeight: 600, fontSize: 16, marginBottom: 8 }}>未加载到 GSC 站点</p>
+            <p style={{ color: '#64748b', fontSize: 14, marginBottom: 20 }}>Token 已过期，请重新登录以继续使用 Google Search Console 数据</p>
+            <button onClick={() => authApi.signInWithGoogle()}
+              style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'#fff', border:'none', borderRadius:10, padding:'12px 28px', fontSize:14, fontWeight:600, cursor:'pointer', boxShadow:'0 4px 14px rgba(99,102,241,0.3)' }}>
+              🔄 重新登录 Google
+            </button>
+          </div>
+        ) : tab !== 'overview' && tab !== 'analytics' && !siteUrl ? (
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 60, textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
             <Globe size={40} style={{ color: '#cbd5e1', margin: '0 auto 16px' }} />
             <p style={{ color: '#94a3b8', fontWeight: 500 }}>Please go to "Google Search Console" tab to select a site</p>

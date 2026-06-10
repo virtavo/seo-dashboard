@@ -115,14 +115,25 @@ function mapGscRows(d: any, dimProps: string[]): any[] {
 }
 const GSC = 'https://searchconsole.googleapis.com/webmasters/v3'
 
-async function gscFetch(token: string, url: string, body?: any) {
+async function gscFetch(token: string, url: string, body?: any, _retry = false): Promise<any> {
   const r = await fetch(url, {
     method: body ? 'POST' : 'GET',
     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
     ...(body ? { body: JSON.stringify(body) } : {}),
   })
   const d = await r.json()
-  if (d.error) throw new Error(d.error.message || JSON.stringify(d.error))
+  if (d.error) {
+    const msg: string = d.error.message || JSON.stringify(d.error)
+    // Auto-refresh token on 401/expired and retry once
+    if (!_retry && (r.status === 401 || msg.includes('401') || msg.includes('UNAUTHENTICATED') || msg.includes('expired'))) {
+      sessionStorage.removeItem('seo_token_expires') // force refresh
+      const newToken = await getValidToken()
+      if (newToken && newToken !== token) {
+        return gscFetch(newToken, url, body, true)
+      }
+    }
+    throw new Error(msg)
+  }
   return d
 }
 

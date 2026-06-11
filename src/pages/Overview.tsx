@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { gscApi, safeArr } from '../api'
+import { gscApi, safeArr, authApi } from '../api'
 import { format, subDays } from 'date-fns'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -246,7 +246,7 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, gap: 12, color: '#64748b' }}>
       <p style={{ fontSize: 15, fontWeight: 600 }}>未加载到 GSC 站点</p>
       <p style={{ fontSize: 13 }}>Token 可能已过期，请刷新页面重新登录</p>
-      <button onClick={() => window.location.reload()} style={{ padding: '8px 20px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>刷新页面</button>
+      <button onClick={() => authApi.signInWithGoogle()} style={{ padding: '8px 20px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>🔄 重新登录 Google</button>
     </div>
   )
 

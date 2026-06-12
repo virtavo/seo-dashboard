@@ -156,6 +156,17 @@ export const gscApi = {
       { ...body, dimensions: ['page'] })
     return mapGscRows(d, ['page'])
   },
+  // Auto-detect keywords ranking for a specific page URL
+  pageKeywords: async (token: string, body: any) => {
+    const d = await gscFetch(token, `${GSC}/sites/${encodeURIComponent(body.siteUrl)}/searchAnalytics/query`, {
+      startDate: body.startDate,
+      endDate: body.endDate,
+      dimensions: ['query'],
+      dimensionFilterGroups: [{ filters: [{ dimension: 'page', operator: 'equals', expression: body.pageUrl }] }],
+      rowLimit: body.rowLimit || 10,
+    })
+    return mapGscRows(d, ['keyword'])
+  },
   opportunities: async (token: string, body: any) => {
     const d = await gscFetch(token, `${GSC}/sites/${encodeURIComponent(body.siteUrl)}/searchAnalytics/query`,
       { ...body, dimensions: ['query'] })

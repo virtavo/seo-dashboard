@@ -45,7 +45,11 @@ const ARTICLES_REGISTRY: Record<string, Array<{
   ],
   // ── virtavo.com ────────────────────────────────────────────────
   'virtavo.com': [
-    // Articles will be added here as they are written
+    { id: 1, title: 'Best Long-Range Security Camera with No Monthly Fees (2026 Guide)', slug: '/2025/07/25/best-long-range-security-camera-no-monthly-fee-2026/', keyword: 'long range security camera no monthly fee', secondary: ['wifi halow security camera','1 mile range security camera','remote security camera no cell service'], product: 'MileFlask', file: '', status: 'published', date: '2026-05-27' },
+    { id: 2, title: 'Window Mounted Security Camera: The Complete Guide (2026)',           slug: '/2026/05/27/window-mounted-security-camera-guide-2026/',                  keyword: 'window mounted security camera',              secondary: ['glass mounted camera','indoor security camera outdoor view','security camera through window'],                product: 'WinEye',    file: '', status: 'published', date: '2026-05-27' },
+    { id: 3, title: 'Why Glass-Mounted Security Cameras Are Booming in 2026',             slug: '/2026/05/27/why-glass-mounted-security-cameras-growing-2026/',             keyword: 'glass mounted camera',                        secondary: ['window mounted security camera','no drill security camera','rental apartment security camera'],            product: 'WinEye',    file: '', status: 'published', date: '2026-05-27' },
+    { id: 4, title: 'Best Security Camera for Renters: No Drilling, No Permission Needed (2026)', slug: '/2026/05/27/best-security-camera-for-renters-2026/',              keyword: 'security camera for renters',               secondary: ['apartment security camera no drilling','no drill security camera','window security camera apartment'], product: 'WinEye',    file: '', status: 'published', date: '2026-05-27' },
+    { id: 5, title: 'Wi-Fi HaLow Security Camera: The Complete 2026 Guide (802.11ah)',    slug: '/2025/07/25/wi-fi-halow-the-game-changing-technology-behind-next-generation-remote-monitoring-cameras/', keyword: 'wifi halow security camera', secondary: ['802.11ah security camera','long range wifi security camera','halow camera system'], product: 'MileFlask', file: '', status: 'published', date: '2026-05-27' },
   ],
   // ── mysnapvitals.com ────────────────────────────────────────
   'mysnapvitals.com': [

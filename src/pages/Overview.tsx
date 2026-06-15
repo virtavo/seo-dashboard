@@ -224,9 +224,12 @@ export default function Overview({ siteUrl, providerToken, sites, onSiteChange }
           // Normalize: ensure summary and every insight is a plain string (prevents React error #31)
           const safeRes = {
             summary: typeof res.summary === 'string' ? res.summary : JSON.stringify(res.summary ?? ''),
-            insights: res.insights.map((item: any) =>
-              typeof item === 'string' ? item : (item?.text ?? item?.suggestion ?? item?.tip ?? JSON.stringify(item))
-            )
+            insights: res.insights.map((item: any) => {
+              if (typeof item === 'string') return item
+              // Safely extract string value — item.text/suggestion/tip might itself be an object
+              const safeStr = (v: any) => typeof v === 'string' ? v : undefined
+              return safeStr(item?.text) ?? safeStr(item?.suggestion) ?? safeStr(item?.tip) ?? JSON.stringify(item)
+            })
           }
           setAiInsights(p => ({ ...p, [type]: safeRes }))
         }

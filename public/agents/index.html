@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEO Agent 管理面板 · seo.foreverdoodle.com/agents</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#283041;
+    --txt:#e6edf3; --muted:#8b949e; --accent:#3b82f6; --accent2:#2563eb;
+    --green:#2ea043; --yellow:#d29922; --red:#da3633; --purple:#a371f7;
+    --cyan:#39c5cf; --radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--txt);font-size:14px;line-height:1.5;padding-bottom:60px}
+  a{color:var(--accent);text-decoration:none}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:var(--bg);
+    border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--cyan)}
+
+  header.topbar{position:sticky;top:0;z-index:30;background:rgba(13,17,23,.85);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:14px 24px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px}
+  .logo .dot{width:10px;height:10px;border-radius:50%;background:var(--green);
+    box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+  @keyframes pulse{50%{opacity:.4}}
+  .domain{color:var(--muted);font-size:12px;font-family:ui-monospace,Menlo,monospace}
+  .topbar .spacer{flex:1}
+  .topbar .stat{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+  .topbar .stat b{font-size:18px}
+  .topbar .stat span{font-size:11px;color:var(--muted)}
+
+  .wrap{max-width:1400px;margin:0 auto;padding:24px}
+
+  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px}
+  .scard{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+  .scard .label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .scard .num{font-size:28px;font-weight:700;margin-top:6px}
+  .scard .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .scard .up{color:var(--green)} .scard .down{color:var(--red)}
+
+  /* global risk banner */
+  .riskbar{background:linear-gradient(135deg,rgba(218,54,51,.10),rgba(210,153,34,.08));
+    border:1px solid rgba(218,54,51,.35);border-radius:var(--radius);padding:14px 18px;margin-bottom:22px}
+  .riskbar h3{font-size:13px;color:#ff7b72;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .riskbar ul{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:6px}
+  .riskbar li{font-size:12px;color:var(--txt);display:flex;gap:8px;align-items:flex-start}
+  .riskbar li .lv{flex-shrink:0;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px}
+  .lv-hi{background:rgba(218,54,51,.2);color:#ff7b72}
+  .lv-md{background:rgba(210,153,34,.2);color:#e3b341}
+  .lv-ok{background:rgba(46,160,67,.2);color:#56d364}
+
+  .site-tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+  .site-tabs button{background:var(--panel);border:1px solid var(--border);color:var(--muted);
+    padding:8px 16px;border-radius:999px;cursor:pointer;font-size:13px;transition:.15s}
+  .site-tabs button.active{background:var(--accent2);border-color:var(--accent);color:#fff}
+  .site-tabs button:hover{border-color:var(--accent)}
+
+  .site-block{margin-bottom:28px;background:var(--panel);border:1px solid var(--border);
+    border-radius:var(--radius);overflow:hidden}
+  .site-head{padding:16px 20px;display:flex;align-items:center;gap:14px;
+    border-bottom:1px solid var(--border);background:var(--panel2);flex-wrap:wrap}
+  .site-head .favgrad{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;
+    justify-content:center;font-weight:700;color:#fff;font-size:15px}
+  .site-head h2{font-size:16px} .site-head .url{font-size:12px;color:var(--muted);font-family:ui-monospace,monospace}
+  .site-head .repo{font-size:11px;color:var(--muted)}
+  .site-head .spacer{flex:1}
+  .badge{font-size:11px;padding:3px 9px;border-radius:999px;font-weight:600}
+  .b-run{background:rgba(46,160,67,.15);color:#56d364}
+  .b-warn{background:rgba(210,153,34,.15);color:#e3b341}
+  .b-idle{background:rgba(139,148,158,.15);color:var(--muted)}
+
+  .seo-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--border)}
+  .seo-cell{background:var(--panel);padding:14px 16px}
+  .seo-cell .k{font-size:11px;color:var(--muted)}
+  .seo-cell .v{font-size:20px;font-weight:700;margin-top:4px}
+  .seo-cell .d{font-size:11px;margin-top:2px}
+  .progress{height:6px;background:var(--panel2);border-radius:999px;margin-top:8px;overflow:hidden}
+  .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--cyan))}
+
+  /* PM board */
+  .pm-board{margin:18px 18px 0;background:linear-gradient(135deg,rgba(247,129,102,.10),rgba(163,113,247,.08));
+    border:1px solid rgba(247,129,102,.35);border-radius:10px;padding:16px}
+  .pm-board .pm-top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .pm-board .ava{width:38px;height:38px;border-radius:9px;background:rgba(247,129,102,.18);
+    border:1px solid rgba(247,129,102,.5);display:flex;align-items:center;justify-content:center;font-size:19px}
+  .pm-board .pm-name{font-weight:700;font-size:14px}
+  .pm-board .pm-sub{font-size:11px;color:var(--muted)}
+  .pm-board .spacer{flex:1}
+  .pm-board .pm-task{font-size:12px;color:var(--muted);background:var(--bg);border:1px solid var(--border);
+    border-radius:7px;padding:8px 10px;margin-bottom:12px}
+  .pm-board .pm-task b{color:var(--txt)}
+  .plan{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+  .plan .pitem{display:flex;gap:9px;align-items:flex-start;background:var(--panel2);
+    border:1px solid var(--border);border-radius:8px;padding:9px 11px}
+  .plan .pico{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;
+    justify-content:center;font-size:13px;flex-shrink:0}
+  .plan .prole{font-size:11px;color:var(--muted)}
+  .plan .pwork{font-size:12px;margin-top:1px}
+  .pm-ctrls{display:flex;gap:8px;margin-top:14px}
+  .pm-ctrls .btn{flex:none;padding:6px 14px}
+
+  .agents{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;padding:18px}
+  .agent{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px;
+    display:flex;flex-direction:column;gap:10px;transition:.15s}
+  .agent:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .agent.has-risk{border-color:rgba(218,54,51,.4)}
+  .agent .row1{display:flex;align-items:center;gap:10px}
+  .agent .ava{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;
+    justify-content:center;font-size:17px;flex-shrink:0}
+  .agent .nm{font-weight:600;font-size:13px}
+  .agent .role{font-size:11px;color:var(--muted)}
+  .agent .spacer{flex:1}
+  .stled{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+  .s-running{background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 1.5s infinite}
+  .s-idle{background:var(--muted)}
+  .s-error{background:var(--red);box-shadow:0 0 6px var(--red);animation:pulse 1s infinite}
+  .agent .task{font-size:12px;background:var(--bg);border:1px solid var(--border);
+    border-radius:7px;padding:8px 10px;min-height:48px}
+  .agent .task .tlabel{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+  .agent .asset{font-size:11px;color:var(--muted);display:flex;gap:5px;align-items:center}
+  .agent .risk{font-size:11px;color:#ffb4ad;background:rgba(218,54,51,.12);
+    border:1px solid rgba(218,54,51,.3);border-radius:6px;padding:6px 8px;display:flex;gap:6px}
+  .agent .meta{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+  .agent .ctrls{display:flex;gap:6px}
+  .btn{flex:1;border:1px solid var(--border);background:var(--panel);color:var(--txt);
+    border-radius:7px;padding:6px 0;font-size:12px;cursor:pointer;transition:.12s}
+  .btn:hover{border-color:var(--accent)}
+  .btn-go{background:var(--green);border-color:var(--green);color:#fff}
+  .btn-stop{background:transparent;color:var(--yellow);border-color:var(--yellow)}
+  .btn-task{background:var(--accent2);border-color:var(--accent);color:#fff}
+
+  .log{padding:0 18px 18px}
+  .log h3{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;
+    margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  .log .feed{background:var(--bg);border:1px solid var(--border);border-radius:8px;
+    max-height:160px;overflow-y:auto;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  .log .line{padding:6px 12px;border-bottom:1px solid var(--border);display:flex;gap:10px}
+  .log .line:last-child{border:0}
+  .log .time{color:var(--muted);flex-shrink:0}
+  .log .who{color:var(--cyan);flex-shrink:0;min-width:62px}
+  .log .lvl-ok{color:#56d364} .log .lvl-warn{color:#e3b341} .log .lvl-err{color:#ff7b72}
+
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;
+    justify-content:center;z-index:50;padding:20px}
+  .modal-bg.show{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    width:100%;max-width:460px;padding:22px}
+  .modal h3{margin-bottom:4px}
+  .modal p.sub{color:var(--muted);font-size:12px;margin-bottom:16px}
+  .modal label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
+  .modal textarea,.modal select{width:100%;background:var(--bg);border:1px solid var(--border);
+    color:var(--txt);border-radius:8px;padding:10px;font-size:13px;font-family:inherit;resize:vertical}
+  .modal .actions{display:flex;gap:10px;margin-top:18px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--green);color:#fff;padding:12px 22px;border-radius:10px;font-size:13px;
+    opacity:0;transition:.3s;z-index:60;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .note{font-size:12px;color:var(--muted);text-align:center;margin-top:30px;
+    border-top:1px solid var(--border);padding-top:18px}
+
+  /* chat drawer */
+  .drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:55;display:none}
+  .drawer-bg.show{display:block}
+  .drawer{position:fixed;top:0;right:0;height:100%;width:420px;max-width:92vw;background:var(--panel);
+    border-left:1px solid var(--border);z-index:56;transform:translateX(100%);transition:.28s cubic-bezier(.22,.68,0,1);
+    display:flex;flex-direction:column;box-shadow:-12px 0 40px rgba(0,0,0,.4)}
+  .drawer.show{transform:translateX(0)}
+  .dr-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--panel2)}
+  .dr-head .ava{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+  .dr-head .nm{font-weight:700;font-size:14px}
+  .dr-head .sub{font-size:11px;color:var(--muted)}
+  .dr-head .x{margin-left:auto;background:none;border:0;color:var(--muted);font-size:22px;cursor:pointer;line-height:1}
+  .dr-mentions{padding:8px 18px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .chip{background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:2px 9px;cursor:pointer;color:var(--cyan);font-size:11px}
+  .chip:hover{border-color:var(--accent)}
+  .dr-body{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+  .msg{display:flex;gap:9px;max-width:88%}
+  .msg .b{padding:9px 12px;border-radius:12px;font-size:13px;line-height:1.5}
+  .msg .who{font-size:10px;color:var(--muted);margin-bottom:3px}
+  .msg.them{align-self:flex-start}
+  .msg.them .b{background:var(--panel2);border:1px solid var(--border);border-top-left-radius:3px}
+  .msg.me{align-self:flex-end;flex-direction:row-reverse}
+  .msg.me .b{background:var(--accent2);color:#fff;border-top-right-radius:3px}
+  .msg.sys{align-self:center;max-width:95%}
+  .msg.sys .b{background:rgba(247,129,102,.10);border:1px solid rgba(247,129,102,.3);color:#ffb892;font-size:12px}
+  .msg .mava{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+  .dr-input{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;background:var(--panel2)}
+  .dr-input textarea{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--txt);border-radius:9px;
+    padding:9px 11px;font-size:13px;font-family:inherit;resize:none;max-height:90px}
+  .dr-send{background:var(--accent2);border:1px solid var(--accent);color:#fff;border-radius:9px;padding:0 16px;cursor:pointer;font-size:13px}
+  .btn-chat{background:transparent;color:var(--cyan);border-color:rgba(57,197,207,.4)}
+
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="logo"><span class="dot"></span>SEO Agent 管理面板</div>
+  <span class="domain">seo.foreverdoodle.com/agents · GitHub</span>
+  <div class="spacer"></div>
+  <div class="stat"><b id="kRunning">0</b><span>运行中 Agent</span></div>
+  <div class="stat"><b id="kRisks">0</b><span>风险项</span></div>
+  <div class="stat"><b id="clock">--:--:--</b><span>系统时间</span></div>
+</header>
+
+<div class="wrap">
+  <div class="summary" id="summary"></div>
+  <div class="riskbar" id="riskbar"></div>
+  <div class="site-tabs" id="siteTabs"></div>
+  <div id="sites"></div>
+  <div class="note" id="note">正在连接 agent 状态接口…</div>
+</div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3>下发任务</h3>
+    <p class="sub" id="modalTarget"></p>
+    <label>任务类型</label>
+    <select id="taskType">
+      <option>关键词研究与布局</option>
+      <option>页面 Meta / 结构化数据优化</option>
+      <option>内链与站点地图重建</option>
+      <option>页面性能 / Core Web Vitals 优化</option>
+      <option>内容生成与改写</option>
+      <option>外链与收录检查</option>
+      <option>UI / 视觉改版</option>
+      <option>代码审核与上线</option>
+      <option>密钥迁移到环境变量（安全）</option>
+    </select>
+    <label>任务说明</label>
+    <textarea id="taskDesc" rows="3" placeholder="描述目标、约束、验收标准…"></textarea>
+    <div class="actions">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-task" onclick="dispatchTask()">下发任务</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- 对话抽屉 -->
+<div class="drawer-bg" id="drawerBg" onclick="closeChat()"></div>
+<aside class="drawer" id="drawer">
+  <div class="dr-head">
+    <div class="ava" id="drAva">💬</div>
+    <div><div class="nm" id="drName">—</div><div class="sub" id="drSub"></div></div>
+    <button class="x" onclick="closeChat()">×</button>
+  </div>
+  <div class="dr-mentions" id="drMentions"></div>
+  <div class="dr-body" id="drBody"></div>
+  <div class="dr-input">
+    <textarea id="drText" rows="1" placeholder="发消息或派任务，回车发送…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+    <button class="dr-send" onclick="sendChat()">发送</button>
+  </div>
+</aside>
+
+<script>
+/* ---------- 角色 ---------- */
+const ROLES = {
+  pm:      {label:"产品经理", icon:"🧭", color:"#f78166"},
+  designer:{label:"设计师", icon:"🎨", color:"#a371f7"},
+  seo:     {label:"SEO 优化师", icon:"📈", color:"#39c5cf"},
+  dev:     {label:"开发工程师", icon:"🛠️", color:"#3b82f6"},
+  frontend:{label:"前端", icon:"💻", color:"#56d364"},
+  backend: {label:"后端", icon:"⚙️", color:"#e3b341"},
+  server:  {label:"服务器 / 运维", icon:"🖥️", color:"#ff9f43"},
+  reviewer:{label:"审核员", icon:"🔍", color:"#ec6cb9"}
+};
+const ST = {running:"运行中", idle:"空闲", error:"异常"};
+// 每个 agent 的名字（接口返回 name 时优先用接口值；此处为回退/演示）
+const AGENT_NAMES = {
+  "showmo365.pm":"Mira","showmo365.designer":"Leo","showmo365.seo":"Kai","showmo365.dev":"Ravi",
+  "showmo365.frontend":"Yuki","showmo365.backend":"Otto","showmo365.server":"Bjorn","showmo365.reviewer":"Vera",
+  "mysnapvitals.pm":"Dana","mysnapvitals.designer":"Coco","mysnapvitals.seo":"Pax","mysnapvitals.dev":"Hugo",
+  "mysnapvitals.frontend":"Lily","mysnapvitals.backend":"Gus","mysnapvitals.server":"Rex","mysnapvitals.reviewer":"Iris",
+  "foreverdoodle.pm":"Theo","foreverdoodle.designer":"Mona","foreverdoodle.seo":"Zara","foreverdoodle.dev":"Finn",
+  "foreverdoodle.frontend":"Nina","foreverdoodle.backend":"Cyrus","foreverdoodle.server":"Atlas","foreverdoodle.reviewer":"June"
+};
+function agentName(siteId, role, a){ return (a && a.name) || AGENT_NAMES[siteId+"."+role] || (ROLES[role]?ROLES[role].label:role); }
+
+/* ---------- 数据（默认演示值，loadData() 会用真实接口覆盖）---------- */
+let SITES = [
+  {
+    id:"showmo365", name:"ShowMo365", url:"showmo365.com",
+    repo:"wineye_seo_preview · mileflask_seo_preview · showmo365-blog",
+    grad:"linear-gradient(135deg,#39c5cf,#2ea043)",
+    seo:{rank:9, rankD:+5, indexed:1356, indexedD:+41, traffic:"58.7k", trafficD:+12.1, score:84, issues:3},
+    agents:[
+      {role:"pm", status:"running", task:"统筹 WinEye / MileFlask 产品页与每日博客 SEO 工作", asset:"showmo_automation_agent_instructions.md", progress:55, eta:"持续"},
+      {role:"designer", status:"running", task:"产品落地页视觉（深色 + 荧光绿主题、Bento 网格）", asset:"wineye_seo_preview/src/App.tsx", progress:72, eta:"12 分钟",
+        risk:"页面图片全部走外部 CDN（cloudfront / skywork），需确认长期可用或本地化"},
+      {role:"seo", status:"running", task:"关键词布局 + FAQ / 产品结构化数据", asset:"App.tsx (faqs / compRows)", progress:48, eta:"20 分钟"},
+      {role:"dev", status:"running", task:"单页 React 产品详情组件开发", asset:"mileflask_seo_preview/src/App.tsx", progress:60, eta:"15 分钟"},
+      {role:"frontend", status:"idle", task:"WinEye 手机端适配（独立静态预览）", asset:"wineye_mobile_preview.html", progress:100, eta:"—"},
+      {role:"backend", status:"running", task:"GSC / GA4 / DataForSEO 代理 + AI 洞察（8 个边缘函数）", asset:"supabase/edge_function/", progress:40, eta:"25 分钟",
+        risk:"凭据已改为环境变量读取，记得在 Supabase Secrets 配置并轮换旧密钥"},
+      {role:"server", status:"running", task:"每日 SEO 博客自动化（GitHub Actions + 生成脚本）", asset:"showmo365-blog/.github/ + scripts/", progress:33, eta:"定时任务"},
+      {role:"reviewer", status:"idle", task:'文章质量与"产品页只读"约束核查', asset:"showmo_automation_agent_instructions.md", progress:100, eta:"待触发"}
+    ]
+  },
+  {
+    id:"mysnapvitals", name:"MySnapVitals", url:"mysnapvitals.com",
+    repo:"migration/（博客脚本）· 经 SEO Dashboard 一键推送",
+    grad:"linear-gradient(135deg,#e3b341,#da3633)",
+    seo:{rank:22, rankD:-2, indexed:498, indexedD:+11, traffic:"12.9k", trafficD:-3.2, score:69, issues:9},
+    agents:[
+      {role:"pm", status:"running", task:"规划 45 篇博客优化 + 关键词追踪闭环", asset:"seo_auto_optimize_plan.md", progress:50, eta:"持续"},
+      {role:"designer", status:"idle", task:"首页 Hero 视觉优化（中期项）", asset:"plan：中期优化", progress:0, eta:"排期中"},
+      {role:"seo", status:"running", task:"45 篇博客 meta description / excerpt 加目标关键词", asset:"plan：快速赢", progress:35, eta:"30 分钟"},
+      {role:"dev", status:"running", task:"blog.ts 关键词优化 + Article JSON-LD Schema", asset:"migration/（mysnapvitals 博客脚本）", progress:28, eta:"40 分钟"},
+      {role:"frontend", status:"idle", task:"首页 <title> A/B 优化", asset:"index.html", progress:0, eta:"待启动"},
+      {role:"backend", status:"running", task:"博客内容生成与推送脚本", asset:"migration/ 脚本", progress:42, eta:"25 分钟"},
+      {role:"server", status:"error", task:"Netlify 自动构建部署", asset:"Netlify（homevirtavo@gmail.com）", progress:0, eta:"已阻断",
+        risk:"Netlify 账户额度耗尽，所有前端变更无法部署（plan 阻断项 P0）"},
+      {role:"reviewer", status:"idle", task:"健康类内容合规复核后方可上线", asset:"migration/HANDOFF.md", progress:100, eta:"待触发"}
+    ]
+  },
+  {
+    id:"foreverdoodle", name:"SEO Dashboard", url:"seo.foreverdoodle.com",
+    repo:"seo_dashboard/（Vite + React + Supabase）· virtavo/seo-dashboard",
+    grad:"linear-gradient(135deg,#3b82f6,#a371f7)",
+    seo:{rank:14, rankD:+3, indexed:842, indexedD:+26, traffic:"31.2k", trafficD:+8.4, score:78, issues:5},
+    agents:[
+      {role:"pm", status:"running", task:"Dashboard 功能规划：新增 Auto-Audit / Keyword Tracker / Deploy 三个 Tab", asset:"seo_auto_optimize_plan.md", progress:45, eta:"持续"},
+      {role:"designer", status:"idle", task:"shadcn/ui 设计系统维护", asset:"src/components/ui/（49 组件）", progress:100, eta:"—"},
+      {role:"seo", status:"running", task:"13 个 SEO 数据看板（Rankings / Coverage / SERP…）", asset:"src/pages/*.tsx", progress:66, eta:"18 分钟"},
+      {role:"dev", status:"running", task:"React + Vite 应用与 API 层", asset:"seo_dashboard/src/", progress:58, eta:"20 分钟"},
+      {role:"frontend", status:"running", task:"Overview / Analytics / Trends 等页面前端", asset:"src/pages/Overview.tsx 等", progress:51, eta:"22 分钟"},
+      {role:"backend", status:"running", task:"10 个 Supabase 边缘函数（含 keyword-sync / blog-generator）", asset:"supabase/edge_function/", progress:44, eta:"25 分钟",
+        risk:"凭据已改为环境变量读取，记得在 Supabase Secrets 配置并轮换旧的 Google OAuth / OpenRouter 密钥"},
+      {role:"server", status:"idle", task:"GitHub 部署 seo.foreverdoodle.com", asset:"GitHub: virtavo/seo-dashboard", progress:100, eta:"—"},
+      {role:"reviewer", status:"idle", task:"上线 diff + SEO 评分回归审核", asset:"PROGRESS.md", progress:100, eta:"待触发"}
+    ]
+  }
+];
+
+/* 站点级风险/待办 */
+const SITE_RISKS = {
+  showmo365:[{level:"ok",text:"边缘函数硬编码 DataForSEO 凭据已改为读环境变量（待配 Supabase Secrets 并轮换）"},
+    {level:"md",text:"产品页图片依赖外部 CDN，建议确认稳定性或本地化"}],
+  mysnapvitals:[{level:"hi",text:"Netlify 额度耗尽，部署链路阻断（P0）"},
+    {level:"hi",text:"GitHub PAT 未配置，一键推送优化链路未打通"}],
+  foreverdoodle:[{level:"ok",text:"已补 tsconfig.node.json / eslint.config.js / .gitignore / .env.example"},
+    {level:"md",text:"根目录散落 App_fixed.tsx（旧备份，当前无法编译，建议清理）"},
+    {level:"ok",text:"边缘函数 Google OAuth / OpenRouter 密钥已改为读环境变量（待轮换旧值）"}]
+};
+
+/* 跨项目全局风险（顶部红条）*/
+const GLOBAL_RISKS = [
+  {level:"ok", text:"已将源码中硬编码密钥（DataForSEO / Google OAuth / OpenRouter）改为读环境变量"},
+  {level:"hi", text:"旧密钥曾以明文存在于导出中，务必在各平台重置 / 轮换一次"},
+  {level:"hi", text:"migration/CREDENTIALS.txt 为明文凭据，已在根 .gitignore 忽略，勿提交"},
+  {level:"md", text:"无依赖锁文件（package-lock.json），首次需 npm install 后再提交锁文件"}
+];
+
+let LOGS = {
+  showmo365:[["09:45","pm","ok","已拆解 WinEye/MileFlask + 博客本周目标并分派"],
+    ["09:40","server","ok","每日博客 Action 触发，生成 2 篇草稿待审核"],
+    ["09:31","designer","warn","检测到落地页图片均为外链 CDN，已登记风险"],
+    ["09:12","backend","ok","已将 dfs-proxy 凭据改为读环境变量"]],
+  mysnapvitals:[["09:52","pm","warn","识别到 Netlify 阻断，已上调运维优先级"],
+    ["09:50","server","err","Netlify 账户额度耗尽，部署失败"],
+    ["09:33","seo","ok","已生成 12 篇博客的 SEO excerpt 草稿"],
+    ["09:05","pm","warn","GitHub PAT 缺失，一键推送链路待打通"]],
+  foreverdoodle:[["09:48","pm","ok","规划 Auto-Audit / Tracker / Deploy 三个新 Tab"],
+    ["09:40","dev","ok","已补 tsconfig.node.json，tsc 引用报错消除"],
+    ["09:35","reviewer","warn","发现 App_fixed.tsx 散落根目录，建议清理"],
+    ["09:20","backend","ok","oauth-callback / token-refresh 改为读环境变量"]]
+};
+
+/* ---------- 渲染 ---------- */
+let activeSite = "all";
+
+function statusBadge(agents){
+  const err = agents.some(a=>a.status==="error");
+  const run = agents.filter(a=>a.status==="running").length;
+  if(err) return `<span class="badge b-warn">需关注</span>`;
+  if(run>0) return `<span class="badge b-run">${run} 个运行中</span>`;
+  return `<span class="badge b-idle">全部空闲</span>`;
+}
+
+function seoRow(s){
+  const d=(v,suffix="")=> (v>=0?`<span style="color:#56d364">▲ ${Math.abs(v)}${suffix}</span>`
+                                :`<span style="color:#ff7b72">▼ ${Math.abs(v)}${suffix}</span>`);
+  return `<div class="seo-row">
+    <div class="seo-cell"><div class="k">平均排名</div><div class="v">#${s.rank}</div><div class="d">${d(s.rankD," 位")}</div></div>
+    <div class="seo-cell"><div class="k">已收录页面</div><div class="v">${s.indexed}</div><div class="d">${d(s.indexedD)}</div></div>
+    <div class="seo-cell"><div class="k">月自然流量</div><div class="v">${s.traffic}</div><div class="d">${d(s.trafficD,"%")}</div></div>
+    <div class="seo-cell"><div class="k">SEO 健康分</div><div class="v">${s.score}<span style="font-size:12px;color:var(--muted)">/100</span></div>
+      <div class="progress"><i style="width:${s.score}%"></i></div></div>
+    <div class="seo-cell"><div class="k">待处理问题</div><div class="v" style="color:${s.issues>5?'#ff7b72':'#e3b341'}">${s.issues}</div><div class="d">个</div></div>
+  </div>`;
+}
+
+function agentCard(siteId, a){
+  const R=ROLES[a.role];
+  const sCls = a.status==="running"?"s-running":a.status==="error"?"s-error":"s-idle";
+  return `<div class="agent ${a.risk?'has-risk':''}">
+    <div class="row1">
+      <div class="ava" style="background:${R.color}22;border:1px solid ${R.color}55">${R.icon}</div>
+      <div><div class="nm">${agentName(siteId,a.role,a)}</div><div class="role">${R.label} · ${ST[a.status]}</div></div>
+      <div class="spacer"></div><div class="stled ${sCls}"></div>
+    </div>
+    <div class="task"><div class="tlabel">当前任务</div>${a.task}
+      ${a.status==="running"?`<div class="progress" style="margin-top:8px"><i style="width:${a.progress}%"></i></div>`:""}
+    </div>
+    <div class="asset">📁 <code>${a.asset}</code></div>
+    ${a.risk?`<div class="risk">⚠ ${a.risk}</div>`:""}
+    <div class="meta"><span>ETA · ${a.eta}</span><span>${a.status==="running"?a.progress+"%":""}</span></div>
+    <div class="ctrls">
+      ${a.status==="running"
+        ? `<button class="btn btn-stop" onclick="toggle('${siteId}','${a.role}')">⏸ 暂停</button>`
+        : `<button class="btn btn-go" onclick="toggle('${siteId}','${a.role}')">▶ 启动</button>`}
+      <button class="btn btn-chat" onclick="openChat('${siteId}','${a.role}')">💬 对话</button>
+    </div>
+  </div>`;
+}
+
+function pmBoard(s){
+  const pm=s.agents.find(a=>a.role==="pm");
+  const others=s.agents.filter(a=>a.role!=="pm");
+  const plan=others.map(a=>{const R=ROLES[a.role];
+    return `<div class="pitem">
+      <div class="pico" style="background:${R.color}22;border:1px solid ${R.color}55">${R.icon}</div>
+      <div><div class="prole">${agentName(s.id,a.role,a)} · ${R.label}</div><div class="pwork">${a.task}</div></div>
+    </div>`;}).join("");
+  return `<div class="pm-board">
+    <div class="pm-top">
+      <div class="ava">${ROLES.pm.icon}</div>
+      <div><div class="pm-name">${agentName(s.id,'pm',pm)} · 产品经理</div><div class="pm-sub">统筹 ${others.length} 个 agent · 规划与分派本站工作</div></div>
+      <div class="spacer"></div><div class="stled ${pm.status==='running'?'s-running':pm.status==='error'?'s-error':'s-idle'}"></div>
+    </div>
+    <div class="pm-task">当前在做：<b>${pm.task}</b> · ETA ${pm.eta}</div>
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">本周工作规划（PM 已分派）</div>
+    <div class="plan">${plan}</div>
+    <div class="pm-ctrls">
+      <button class="btn btn-task" onclick="openChat('${s.id}','pm')">💬 与 PM 对话</button>
+      <button class="btn btn-chat" onclick="openChannel('${s.id}')">📡 团队频道</button>
+      <button class="btn" onclick="replan('${s.id}')">🔄 重新规划全队</button>
+    </div>
+  </div>`;
+}
+
+function siteBlock(s){
+  const others=s.agents.filter(a=>a.role!=="pm");
+  const risks=(SITE_RISKS[s.id]||[]).map(r=>
+    `<li><span class="lv lv-${r.level}">${r.level==='hi'?'高':r.level==='md'?'中':'已处理'}</span>${r.text}</li>`).join("");
+  return `<div class="site-block" data-site="${s.id}">
+    <div class="site-head">
+      <div class="favgrad" style="background:${s.grad}">${s.name[0]}</div>
+      <div><h2>${s.name}</h2><div class="url">${s.url}</div><div class="repo">📦 ${s.repo}</div></div>
+      <div class="spacer"></div>${statusBadge(s.agents)}
+    </div>
+    ${seoRow(s.seo)}
+    ${pmBoard(s)}
+    <div class="agents">${others.map(a=>agentCard(s.id,a)).join("")}</div>
+    ${risks?`<div class="riskbar" style="margin:0 18px 18px"><h3>⚠ 本站待办 / 风险</h3><ul>${risks}</ul></div>`:""}
+    <div class="log">
+      <h3>🗒️ 活动日志</h3>
+      <div class="feed">${(LOGS[s.id]||[]).map(l=>
+        `<div class="line"><span class="time">${l[0]}</span><span class="who">${ROLES[l[1]]?ROLES[l[1]].label:l[1]}</span>
+         <span class="lvl-${l[2]}">${l[3]}</span></div>`).join("")}</div>
+    </div>
+  </div>`;
+}
+
+function renderSummary(){
+  let run=0,err=0,tasks=0;
+  SITES.forEach(s=>s.agents.forEach(a=>{if(a.status==="running"){run++;tasks++}if(a.status==="error")err++}));
+  document.getElementById("kRunning").textContent=run;
+  const totalRisks=Object.values(SITE_RISKS).flat().filter(r=>r.level!=='ok').length;
+  document.getElementById("kRisks").textContent=totalRisks;
+  const avgScore=Math.round(SITES.reduce((x,s)=>x+s.seo.score,0)/SITES.length);
+  const totalIndexed=SITES.reduce((x,s)=>x+s.seo.indexed,0);
+  document.getElementById("summary").innerHTML=`
+    <div class="scard"><div class="label">▶ 进行中任务</div><div class="num">${tasks}</div><div class="sub">across ${SITES.length} 个网站</div></div>
+    <div class="scard"><div class="label">⚠ 异常 Agent</div><div class="num" style="color:${err?'#ff7b72':'#56d364'}">${err}</div><div class="sub">${err?'需立即处理':'运行正常'}</div></div>
+    <div class="scard"><div class="label">📊 平均 SEO 分</div><div class="num">${avgScore}</div><div class="sub up">较上周 ▲ 4</div></div>
+    <div class="scard"><div class="label">📄 总收录页面</div><div class="num">${totalIndexed}</div><div class="sub up">▲ 78 本周</div></div>
+    <div class="scard"><div class="label">🔐 待办 / 风险</div><div class="num" style="color:#ff7b72">${totalRisks}</div><div class="sub">含安全项</div></div>`;
+}
+
+function renderRiskbar(){
+  document.getElementById("riskbar").innerHTML=
+    `<h3>🔐 跨项目待办 / 风险（迁移到 GitHub 前需处理）</h3>
+     <ul>${GLOBAL_RISKS.map(r=>
+       `<li><span class="lv lv-${r.level}">${r.level==='hi'?'高':r.level==='md'?'中':'已处理'}</span>${r.text}</li>`).join("")}</ul>`;
+}
+
+function renderTabs(){
+  const t=document.getElementById("siteTabs");
+  t.innerHTML=`<button class="${activeSite==='all'?'active':''}" onclick="selectSite('all')">全部网站</button>`+
+    SITES.map(s=>`<button class="${activeSite===s.id?'active':''}" onclick="selectSite('${s.id}')">${s.name}</button>`).join("");
+}
+function renderSites(){
+  document.getElementById("sites").innerHTML=
+    SITES.filter(s=>activeSite==='all'||s.id===activeSite).map(siteBlock).join("");
+}
+function selectSite(id){activeSite=id;renderTabs();renderSites();}
+function renderAll(){renderSummary();renderRiskbar();renderTabs();renderSites();}
+
+/* ---------- 交互 ---------- */
+function toggle(siteId,role){
+  const s=SITES.find(x=>x.id===siteId), a=s.agents.find(x=>x.role===role);
+  if(a.status==="running"){a.status="idle";a.eta="—";a.progress=100;toast(`已暂停 · ${s.name} / ${ROLES[role].label}`);}
+  else{a.status="running";a.progress=15;a.eta="计算中…";toast(`已启动 · ${s.name} / ${ROLES[role].label}`);}
+  report('set-status',{site:siteId,role,status:a.status,progress:a.progress,eta:a.eta});
+  report('log',{site:siteId,role,level:'ok',message:a.status==='running'?'管理员启动':'管理员暂停'});
+  renderAll();
+}
+let mTarget={};
+function openModal(siteId,role){
+  mTarget={siteId,role};
+  const s=SITES.find(x=>x.id===siteId);
+  document.getElementById("modalTarget").textContent=`目标：${s.name} → ${ROLES[role].label}`;
+  document.getElementById("taskDesc").value="";
+  document.getElementById("modalBg").classList.add("show");
+}
+function closeModal(){document.getElementById("modalBg").classList.remove("show");}
+function dispatchTask(){
+  const s=SITES.find(x=>x.id===mTarget.siteId), a=s.agents.find(x=>x.role===mTarget.role);
+  const type=document.getElementById("taskType").value;
+  a.status="running";a.task=type;a.progress=8;a.eta="计算中…";
+  (LOGS[s.id]=LOGS[s.id]||[]).unshift([nowHM(),mTarget.role,"ok",`已接收新任务：${type}`]);
+  closeModal();renderAll();toast(`任务已下发 · ${ROLES[mTarget.role].label}`);
+}
+const PLAN_POOL={
+  designer:["重绘落地页 Hero 视觉","统一品牌视觉规范","设计富媒体内容模块"],
+  seo:["分析竞品关键词缺口","重写核心页 meta","构建主题内容簇"],
+  dev:["修复重定向链","重构组件减小体积","接入 JSON-LD"],
+  frontend:["优化 LCP 与首屏","压缩内联关键 CSS","修复移动端布局"],
+  backend:["增加边缘缓存","生成动态 sitemap","清理重复 canonical"],
+  server:["调整 CDN 策略","续期 / 恢复部署","配置监控告警"],
+  reviewer:["审核上线 diff","核对 SEO 回归","合规复核"]
+};
+function replan(siteId){
+  const s=SITES.find(x=>x.id===siteId);
+  const pm=s.agents.find(a=>a.role==="pm"); pm.status="running";pm.progress=10;pm.eta="计算中…";
+  s.agents.filter(a=>a.role!=="pm").forEach((a,i)=>{
+    const pool=PLAN_POOL[a.role]; if(pool) a.task=pool[(i+(Date.now()/1000|0))%pool.length];
+    if(a.status==="idle"){a.status="running";a.progress=12;a.eta="计算中…";}
+  });
+  (LOGS[s.id]=LOGS[s.id]||[]).unshift([nowHM(),"pm","ok",`已重新规划全队，分派 ${s.agents.length-1} 项任务`]);
+  renderAll();toast(`PM 已重新规划 · ${s.name}`);
+}
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),2200);}
+function nowHM(){const d=new Date();return String(d.getHours()).padStart(2,'0')+":"+String(d.getMinutes()).padStart(2,'0');}
+function tick(){document.getElementById("clock").textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false});}
+
+/* ---------- Agent 对话 / 互通 ---------- */
+const CHAT={};
+const CHANNEL={};
+let chatTarget=null;
+
+const HANDOFF={
+  pm:      {to:"seo",      msg:"已拆解目标，请先出关键词与页面优化清单"},
+  seo:     {to:"dev",      msg:"关键词与 meta 方案已就绪，请落地到页面代码"},
+  designer:{to:"frontend", msg:"设计稿已交付，请对接实现并保证响应式"},
+  dev:     {to:"reviewer", msg:"代码改动完成，提交 diff 待审核"},
+  frontend:{to:"backend",  msg:"前端就绪，需要对应数据接口配合"},
+  backend: {to:"server",   msg:"接口已通过自测，请安排部署"},
+  server:  {to:"reviewer", msg:"已部署到预览环境，请做上线前回归"},
+  reviewer:{to:"pm",       msg:"审核通过，可纳入本周成果并对外发布"}
+};
+
+function seedChats(){
+  SITES.forEach(s=>{
+    CHAT[s.id]={}; CHANNEL[s.id]=[];
+    s.agents.forEach(a=>{
+      const arr=[{from:a.role, text:`你好，我负责「${ROLES[a.role].label}」。当前在做：${a.task}`, t:"09:30"}];
+      if(a.risk) arr.push({from:a.role, text:`⚠ 需要你关注一个风险：${a.risk}`, t:"09:32"});
+      CHAT[s.id][a.role]=arr;
+    });
+    CHANNEL[s.id]=[
+      {from:"pm", text:`本周目标已分派，各位按优先级推进，有阻塞在频道里 @ 我。`, t:"09:30"},
+      {from:"backend", text:`收到。数据接口我先保证 GSC/GA 拉取稳定。`, t:"09:31"}
+    ];
+  });
+}
+
+function avaHtml(from){
+  if(from==="me") return `<div class="mava" style="background:#2563eb33;border:1px solid #2563eb">🧑‍💼</div>`;
+  if(from==="sys") return "";
+  const R=ROLES[from]; return `<div class="mava" style="background:${R.color}22;border:1px solid ${R.color}55">${R.icon}</div>`;
+}
+function msgHtml(m){
+  const cls = m.from==="me"?"me":m.from==="sys"?"sys":"them";
+  const who = m.from==="me"?"我（管理员）":m.from==="sys"?"":ROLES[m.from].label;
+  return `<div class="msg ${cls}">${avaHtml(m.from)}<div>${who?`<div class="who">${who} · ${m.t}</div>`:""}<div class="b">${m.text}</div></div></div>`;
+}
+
+function openChat(siteId, role){
+  chatTarget={siteId, role};
+  const R=ROLES[role], s=SITES.find(x=>x.id===siteId), self=s.agents.find(x=>x.role===role);
+  document.getElementById("drAva").innerHTML=R.icon;
+  document.getElementById("drAva").style.cssText=`background:${R.color}22;border:1px solid ${R.color}55`;
+  document.getElementById("drName").textContent=`${agentName(siteId,role,self)} · ${R.label}`;
+  document.getElementById("drSub").textContent=`${s.name} · 单独对话与派任务 · 可 @ 其他 agent 协作`;
+  const others=s.agents.filter(a=>a.role!==role).map(a=>
+    `<span class="chip" onclick="quoteMention('${a.role}')">@${agentName(siteId,a.role,a)}</span>`).join("");
+  document.getElementById("drMentions").innerHTML=`<span>快捷协作：</span>${others}`;
+  renderChat(); showDrawer();
+}
+function openChannel(siteId){
+  chatTarget={siteId, channel:true};
+  const s=SITES.find(x=>x.id===siteId);
+  document.getElementById("drAva").innerHTML="📡";
+  document.getElementById("drAva").style.cssText=`background:#39c5cf22;border:1px solid #39c5cf55`;
+  document.getElementById("drName").textContent=`团队频道 · ${s.name}`;
+  document.getElementById("drSub").textContent=`${s.agents.length} 个 agent 互通协作`;
+  document.getElementById("drMentions").innerHTML=`<span>在此广播给全队，可 @ 指定 agent</span>`;
+  renderChat(); showDrawer();
+}
+function curMsgs(){
+  if(!chatTarget) return [];
+  return chatTarget.channel ? CHANNEL[chatTarget.siteId] : CHAT[chatTarget.siteId][chatTarget.role];
+}
+function renderChat(){
+  const body=document.getElementById("drBody");
+  body.innerHTML=curMsgs().map(msgHtml).join("");
+  body.scrollTop=body.scrollHeight;
+}
+function quoteMention(role){
+  const nm = chatTarget ? agentName(chatTarget.siteId, role) : (ROLES[role]?ROLES[role].label:role);
+  const t=document.getElementById("drText"); t.value=`@${nm} `+t.value; t.focus();
+}
+function showDrawer(){document.getElementById("drawerBg").classList.add("show");document.getElementById("drawer").classList.add("show");document.getElementById("drText").focus();}
+function closeChat(){document.getElementById("drawerBg").classList.remove("show");document.getElementById("drawer").classList.remove("show");chatTarget=null;}
+
+function sendChat(){
+  const t=document.getElementById("drText"); const text=t.value.trim(); if(!text||!chatTarget) return;
+  const sid=chatTarget.siteId;
+  curMsgs().push({from:"me", text, t:nowHM()}); t.value=""; renderChat();
+  report('message',{site:sid, role:chatTarget.channel?null:chatTarget.role, channel:!!chatTarget.channel, from_role:'me', body:text});
+
+  if(chatTarget.channel){
+    const hit=Object.keys(ROLES).find(r=> text.includes(ROLES[r].label) || text.includes(agentName(sid,r)));
+    setTimeout(()=>{ const who=hit||"pm";
+      CHANNEL[sid].push({from:who, text:hitReply(who,text), t:nowHM()}); renderChat();
+    },650);
+    return;
+  }
+  const role=chatTarget.role, isTask=/优化|修复|重写|生成|部署|检查|做|加|改|上线|审核|分析/.test(text);
+  setTimeout(()=>{
+    CHAT[sid][role].push({from:role, text: isTask
+      ? `收到，我开始处理：「${text}」。完成后我会在团队频道同步。`
+      : `好的，${text.length>10?'我记下了，会在当前任务中考虑。':'明白。'}`, t:nowHM()});
+    renderChat();
+    if(isTask){
+      const a=SITES.find(x=>x.id===sid).agents.find(x=>x.role===role);
+      a.status="running"; if(a.progress>=100)a.progress=10; a.eta="计算中…";
+      report('set-status',{site:sid,role,status:'running',progress:a.progress,eta:a.eta});
+      report('log',{site:sid,role,level:'ok',message:`接收管理员任务：${text.slice(0,18)}`});
+      (LOGS[sid]=LOGS[sid]||[]).unshift([nowHM(),role,"ok",`接收管理员任务：${text.slice(0,18)}…`]);
+      CHANNEL[sid].push({from:role, text:`@产品经理 已接管理员新任务：${text.slice(0,24)}`, t:nowHM()});
+      const ho=HANDOFF[role];
+      if(ho){
+        setTimeout(()=>{
+          CHANNEL[sid].push({from:role, text:`@${ROLES[ho.to].label} ${ho.msg}`, t:nowHM()});
+          CHAT[sid][ho.to].push({from:role, text:`【来自 ${ROLES[role].label}】${ho.msg}`, t:nowHM()});
+          if(chatTarget && chatTarget.channel) renderChat();
+          renderAll();
+        },900);
+      }
+      renderAll(); toast(`已派任务 · ${ROLES[role].label} → 已联动 ${HANDOFF[role]?ROLES[HANDOFF[role].to].label:'团队频道'}`);
+    }
+  },600);
+}
+function hitReply(role,text){
+  const m={pm:"收到，我来协调优先级与排期。",seo:"我评估下关键词影响面再反馈。",designer:"视觉这边可以配合，给我落地页范围。",
+    dev:"代码这边没问题，我排进本次改动。",frontend:"前端可承接，注意响应式即可。",backend:"接口我来支持，确认下数据字段。",
+    server:"部署我安排，先确认环境与额度。",reviewer:"我会在上线前做回归与合规检查。"};
+  return m[role]||"收到。";
+}
+
+/* ---------- 真实接口接入 ---------- */
+const API = {
+  // Supabase 项目的 Edge Functions 地址
+  base: "https://grogrigybgimvuuunxef.supabase.co/functions/v1",
+  // 填入 Supabase anon key（publishable，可公开）；留空则保持演示数据
+  key:  ""
+};
+function authHeaders(){ return API.key ? {apikey:API.key, Authorization:"Bearer "+API.key} : {}; }
+function setSource(txt){ const n=document.getElementById("note"); if(n) n.textContent=txt; }
+let chatsSeeded=false;
+
+async function loadData(){
+  try{
+    const r = await fetch(`${API.base}/agent-status`, { headers: authHeaders() });
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const d = await r.json();
+    if(d && Array.isArray(d.sites) && d.sites.length){
+      SITES = d.sites; LOGS = d.logs || {};
+      setSource("● 实时接口数据 · 最后更新 "+new Date().toLocaleTimeString('zh-CN',{hour12:false})+"（每 30s 自动刷新）");
+    } else {
+      setSource("● 演示数据（接口暂无数据，已回退）");
+    }
+  }catch(e){
+    setSource("● 演示数据（未连接接口：在 API.key 填入 anon key 并部署 agent-status 后自动切换为实时数据）");
+  }
+  if(!chatsSeeded){ seedChats(); chatsSeeded=true; }
+  renderAll();
+}
+// best-effort 把管理员操作回传给接口（未配置 key 则静默跳过）
+function report(action, payload){
+  if(!API.key) return;
+  fetch(`${API.base}/agent-status`, { method:"POST",
+    headers:{...authHeaders(), "Content-Type":"application/json"},
+    body: JSON.stringify({ action, ...payload }) }).catch(()=>{});
+}
+
+setInterval(tick,1000);tick();
+loadData();
+setInterval(loadData, 30000);
+document.getElementById("modalBg").addEventListener("click",e=>{if(e.target.id==="modalBg")closeModal();});
+</script>
+</body>
+</html>
